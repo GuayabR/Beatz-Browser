@@ -1,20 +1,21 @@
-const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const audio = document.getElementById("gameAudio");
 const notesArray = [];
 const noteSpeed = 3.5; // Speed at which notes fall
-const bpm = 125; // Beats per minute
+const bpm = 140; // Beats per minute
 const beatTime = 60 / bpm; // Time for one beat in seconds
 const noteTypes = ["left", "up", "down", "right"];
-const noteSize = 40; // Uniform size for square notes
-const noteSpacing = 10; // Fixed separation between notes on X axis
+const noteSize = 50; // Uniform size for square notes
+const noteSpacing = 15; // Fixed separation between notes on X axis
+const hitRange = 50; // Range within which a note is considered hit
 let gameStarted = false; // Game state variable
 let score = 0; // Initialize score
 let recording = false; // To track if we're recording key presses
 let recordedNotes = []; // Store recorded notes
 let startTime; // Track game start time for recording
 let customNotes = []; // Store custom notes for playback
-let startRecordButton, stopRecordButton; // Buttons for recording
+let startRecordButton, stopRecordButton, autoHitButton, importButton, copyButton; // Buttons for recording, auto-hit, import, and copy
 
 // Track the state of highlighted stationary notes
 const highlightedNotes = {
@@ -24,6 +25,22 @@ const highlightedNotes = {
     right: false
 };
 
+// Preload images
+const images = {
+    background: new Image(),
+    note: {},
+    notePress: {}
+};
+
+noteTypes.forEach((type) => {
+    images.note[type] = new Image();
+    images.notePress[type] = new Image();
+    images.note[type].src = `Resources/Note${type}.png`;
+    images.notePress[type].src = `Resources/Note${type}Press.png`;
+});
+
+images.background.src = "Resources/starSystem.jpg";
+
 // Set keybinds
 const keyBindings = {
     A: "left",
@@ -32,14 +49,14 @@ const keyBindings = {
     L: "right"
 };
 
-// Track pressed keys
-const pressedKeys = new Set();
-
 // Reset button
 const resetButton = document.createElement("button");
 resetButton.innerText = "Reset Game";
 resetButton.onclick = resetGame;
 document.body.appendChild(resetButton);
+
+// Flag to determine if auto-hit is enabled
+let autoHitEnabled = false;
 
 // Note generator (for custom sequence or random)
 function generateNotes() {
@@ -103,6 +120,51 @@ function stopRecording() {
     stopRecordButton.style.display = "none";
 }
 
+// Import notes from clipboard
+async function importNotes() {
+    try {
+        const clipboardText = await navigator.clipboard.readText();
+        const notes = JSON.parse(clipboardText);
+        if (Array.isArray(notes)) {
+            customNotes = notes;
+            localStorage.setItem("recordedNotes", JSON.stringify(notes));
+            console.log("Imported notes:", notes);
+
+            // Show confirmation popup
+            if (window.confirm("Notes imported successfully. The page will reload to apply the changes.")) {
+                location.reload(); // Reload page to apply imported notes
+            }
+        } else {
+            console.error("Clipboard data is not a valid notes array.");
+        }
+    } catch (err) {
+        console.error("Failed to read clipboard data:", err);
+    }
+}
+
+// Copy recorded notes to clipboard
+function copyNotesToClipboard() {
+    const savedNotes = localStorage.getItem("recordedNotes");
+    if (savedNotes) {
+        navigator.clipboard
+            .writeText(savedNotes)
+            .then(() => {
+                console.log("Copied notes to clipboard:", JSON.parse(savedNotes));
+            })
+            .catch((err) => {
+                console.error("Failed to copy notes to clipboard:", err);
+            });
+    } else {
+        console.error("No recorded notes found in localStorage.");
+    }
+}
+
+// Toggle auto-hit mode
+function toggleAutoHit() {
+    autoHitEnabled = !autoHitEnabled;
+    console.log(`Auto-hit ${autoHitEnabled ? "enabled" : "disabled"}.`);
+}
+
 // Reset the game
 function resetGame() {
     gameStarted = false; // Stop the game
@@ -127,7 +189,8 @@ function resetGame() {
 
 // Draw notes and stationary hit blocks on canvas
 function drawNotes() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw background image
+    ctx.drawImage(images.background, 0, 0, canvas.width, canvas.height);
 
     // Calculate the center position for alignment
     const centerX = canvas.width / 2;
@@ -135,14 +198,13 @@ function drawNotes() {
     // Draw stationary hit blocks (Y position: 600)
     noteTypes.forEach((type, index) => {
         const x = index * (noteSize + noteSpacing) + centerX - ((noteSize + noteSpacing) * (noteTypes.length - 1)) / 2;
-        ctx.fillStyle = highlightedNotes[type] ? "lightgray" : "gray";
-        ctx.fillRect(x, 600, noteSize, noteSize); // Stationary blocks
+        const imageToDraw = highlightedNotes[type] ? images.notePress[type] : images.note[type];
+        ctx.drawImage(imageToDraw, x, 600, noteSize, noteSize); // Stationary blocks
     });
 
     // Draw falling notes
     notesArray.forEach((note) => {
-        ctx.fillStyle = "white";
-        ctx.fillRect(note.x, note.y, noteSize, noteSize); // Draw square note
+        ctx.drawImage(images.note[note.type], note.x, note.y, noteSize, noteSize); // Draw note with texture
     });
 
     // Draw score on canvas
@@ -155,18 +217,6 @@ function drawNotes() {
         ctx.fillStyle = "red";
         ctx.font = "30px Arial";
         ctx.fillText("Recording Notes", canvas.width / 2 - 100, 50); // Display text in the middle of the canvas
-    }
-}
-
-// Update notes positions
-function updateNotes() {
-    for (let i = 0; i < notesArray.length; i++) {
-        notesArray[i].y += noteSpeed;
-        if (notesArray[i].y > canvas.height) {
-            notesArray.splice(i, 1);
-            score--; // Decrease score for missed note
-            i--;
-        }
     }
 }
 
@@ -184,6 +234,24 @@ window.onload = function () {
     stopRecordButton.style.display = "none"; // Hidden initially
     stopRecordButton.onclick = stopRecording;
     document.body.appendChild(stopRecordButton);
+
+    // Create Auto-Hit button
+    autoHitButton = document.createElement("button");
+    autoHitButton.innerText = "Auto-Hit";
+    autoHitButton.onclick = toggleAutoHit;
+    document.body.appendChild(autoHitButton);
+
+    // Create Import Notes button
+    importButton = document.createElement("button");
+    importButton.innerText = "Import Notes";
+    importButton.onclick = importNotes;
+    document.body.appendChild(importButton);
+
+    // Create Copy Notes button
+    copyButton = document.createElement("button");
+    copyButton.innerText = "Copy Notes";
+    copyButton.onclick = copyNotesToClipboard;
+    document.body.appendChild(copyButton);
 };
 
 // Handle key press and release events
@@ -194,7 +262,7 @@ document.addEventListener("keydown", (event) => {
     } else if (gameStarted && noteType) {
         if (recording) {
             // Record the key press with timestamp if recording
-            const timestamp = Date.now() - startTime - 1050; // Subtract 1000ms (1 second) from the timestamp
+            const timestamp = Date.now() - startTime - 1100; // Subtract 1000ms (1 second) from the timestamp
             recordedNotes.push({
                 type: noteType,
                 timestamp: timestamp
@@ -207,22 +275,72 @@ document.addEventListener("keydown", (event) => {
 
         // Check for note hit
         for (let i = 0; i < notesArray.length; i++) {
-            if (notesArray[i].type === noteType && Math.abs(notesArray[i].y - 600) < noteSize) {
+            if (notesArray[i].type === noteType && Math.abs(notesArray[i].y - 600) < hitRange) {
                 notesArray.splice(i, 1); // Remove note if hit
                 score++; // Increase score for hitting note
+                playSoundEffect("Resources/SFX/hoverBtn.mp3", 1);
                 break;
             }
         }
     }
 });
 
+// Function to play a sound
+function playSoundEffect(audioPath, vol) {
+    const audio = new Audio(audioPath);
+    audio.volume = vol;
+    audio.play().catch((error) => {
+        console.error("Audio playback failed:", error);
+    });
+}
+
 document.addEventListener("keyup", (event) => {
     const noteType = keyBindings[event.key.toUpperCase()];
     if (noteType) {
-        // Unhighlight the corresponding stationary note
+        // Stop highlighting the stationary note
         highlightedNotes[noteType] = false;
     }
 });
+
+let lastTime = 0; // To track the time of the last frame
+
+// Update notes positions
+function updateNotes(deltaTime) {
+    const adjustedNoteSpeed = noteSpeed * (deltaTime / 6); // Adjust note speed based on deltaTime
+
+    for (let i = 0; i < notesArray.length; i++) {
+        notesArray[i].y += adjustedNoteSpeed;
+        if (notesArray[i].y > canvas.height) {
+            notesArray.splice(i, 1);
+            score--; // Decrease score for missed note
+            i--;
+        }
+    }
+
+    // Auto-hit logic
+    if (autoHitEnabled) {
+        notesArray.forEach((note) => {
+            if (Math.abs(note.y - 650) < hitRange) {
+                // Simulate key press
+                simulateKeyPress(note.type);
+            }
+        });
+    }
+}
+
+// Simulate key press for a note type
+function simulateKeyPress(noteType) {
+    const key = Object.keys(keyBindings).find((k) => keyBindings[k] === noteType);
+    if (key) {
+        // Trigger key down event
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: key }));
+
+        // Wait 50 ms and trigger key up event
+        setTimeout(() => {
+            document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
+        }, 100);
+    }
+}
 
 // Start the game
 function startGame() {
@@ -231,14 +349,18 @@ function startGame() {
     audio.play(); // Start playing the audio
     startTime = Date.now(); // Set start time for recording
     generateNotes(); // Start generating notes
-    gameLoop(); // Start the game loop
+    lastTime = performance.now(); // Initialize lastTime with current time
+    gameLoop(lastTime); // Start the game loop with the current time
 }
 
 // Game loop
-function gameLoop() {
+function gameLoop(currentTime) {
+    const deltaTime = currentTime - lastTime; // Calculate delta time
+    lastTime = currentTime; // Update lastTime to currentTime
+
     if (gameStarted) {
-        updateNotes();
+        updateNotes(deltaTime); // Pass deltaTime to updateNotes
         drawNotes();
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(gameLoop); // Request the next frame
     }
 }
