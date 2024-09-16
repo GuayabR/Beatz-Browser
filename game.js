@@ -1,6 +1,8 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const audio = document.getElementById("gameAudio");
+const WIDTH = 1280;
+const HEIGHT = 720;
 const notesArray = [];
 const noteSpeed = 3.5; // Speed at which notes fall
 const bpm = 140; // Beats per minute
@@ -209,8 +211,16 @@ function drawNotes() {
 
     // Draw score on canvas
     ctx.fillStyle = "white";
+    ctx.textAlign = "left";
     ctx.font = "24px Arial";
     ctx.fillText(`Score: ${score}`, 10, 30); // Display score
+
+    // Current + Max streak
+    ctx.font = "30px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(streak, WIDTH / 2, HEIGHT / 2 - 120);
+    ctx.font = "15px Arial";
+    ctx.fillText(maxStreak, WIDTH / 2, HEIGHT / 2 - 160);
 
     // Display "Recording Notes" if recording
     if (recording) {
@@ -254,11 +264,14 @@ window.onload = function () {
     document.body.appendChild(copyButton);
 };
 
+let streak = 0;
+let maxStreak = 0;
+
 // Handle key press and release events
 document.addEventListener("keydown", (event) => {
     const noteType = keyBindings[event.key.toUpperCase()];
     if (event.key === "Enter" && !gameStarted) {
-        startGame(); // Start the game when Enter is pressed
+        resetGame(); // Start the game when Enter is pressed
     } else if (gameStarted && noteType) {
         if (recording) {
             // Record the key press with timestamp if recording
@@ -278,6 +291,10 @@ document.addEventListener("keydown", (event) => {
             if (notesArray[i].type === noteType && Math.abs(notesArray[i].y - 600) < hitRange) {
                 notesArray.splice(i, 1); // Remove note if hit
                 score++; // Increase score for hitting note
+                streak++;
+                if (streak > maxStreak) {
+                    maxStreak = streak;
+                }
                 playSoundEffect("Resources/SFX/hoverBtn.mp3", 1);
                 break;
             }
@@ -313,6 +330,7 @@ function updateNotes(deltaTime) {
         if (notesArray[i].y > canvas.height) {
             notesArray.splice(i, 1);
             score--; // Decrease score for missed note
+            streak = 0;
             i--;
         }
     }

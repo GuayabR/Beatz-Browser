@@ -1,0 +1,5 @@
+1.0.0
+Added a placeholder song, no textures.
+Added keybinds: A - Left | S - Up | K - Down | L - Right.
+Added a random note generator.
+Added a note recording system; press record, and all your next keys pressed will be saved to an array to then play once you stop recording, allowing for PERFECT synchronization.
