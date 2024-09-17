@@ -11,6 +11,13 @@ const noteTypes = ["left", "up", "down", "right"];
 const noteSize = 50; // Uniform size for square notes
 const noteSpacing = 15; // Fixed separation between notes on X axis
 const hitRange = 50; // Range within which a note is considered hit
+const targetYPositionStart = 500; // New start of the hit zone
+const targetYPositionEnd = 600; // End of the hit zone
+// Early/Late and Perfect hit zones
+const perfectRange = 10; // 10 pixels on either side for perfect hit
+const targetYPosition = 600; // Y-position of stationary hit blocks
+let streak = 0;
+let maxStreak = 0;
 let autoHitEnabled = false; // Flag to determine if auto-hit is enabled
 let gameStarted = false; // Game state variable
 let points = 0; // Initialize points
@@ -101,7 +108,7 @@ function generateNotes(duration) {
                 const noteType = noteTypes[Math.floor(Math.random() * noteTypes.length)];
                 notesArray.push({
                     type: noteType,
-                    y: -50,
+                    y: -60,
                     x: noteXPositions[noteType] // Position based on custom X coordinates
                 });
 
@@ -323,13 +330,6 @@ window.onload = function () {
     document.body.appendChild(copyButton);
 };
 
-let streak = 0;
-let maxStreak = 0;
-
-// Early/Late and Perfect hit zones
-const perfectRange = 10; // 10 pixels on either side for perfect hit
-const targetYPosition = 600; // Y-position of stationary hit blocks
-
 // Handle key press events (updated with hit zones)
 document.addEventListener("keydown", (event) => {
     const noteType = keyBindings[event.key.toUpperCase()];
@@ -356,20 +356,18 @@ document.addEventListener("keydown", (event) => {
         for (let i = 0; i < notesArray.length; i++) {
             if (notesArray[i].type === noteType) {
                 const noteY = notesArray[i].y;
-                const distanceFromTarget = Math.abs(noteY - targetYPosition);
 
-                if (distanceFromTarget <= hitRange) {
-                    // If within hit range
+                if (noteY >= targetYPositionStart && noteY <= targetYPositionEnd) {
+                    // If within the new hit range (550-600)
                     let hitType;
-                    if (distanceFromTarget <= perfectRange) {
+                    const distanceFromCenter = Math.abs(noteY - (targetYPositionStart + targetYPositionEnd) / 2);
+
+                    if (distanceFromCenter <= perfectRange) {
                         hitType = "Perfect"; // Within perfect range
                         points += 1; // Reward for perfect hit
-                    } else if (noteY < targetYPosition) {
-                        hitType = "Early"; // Hit early
-                        points += 0.5; // Normal points
                     } else {
-                        hitType = "Late"; // Hit late
-                        points += 0.5; // Normal points
+                        hitType = noteY < (targetYPositionStart + targetYPositionEnd) / 2 ? "Early" : "Late";
+                        points += 0.5; // Normal points for early or late hits
                     }
 
                     streak++;
