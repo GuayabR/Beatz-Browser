@@ -3,18 +3,18 @@ const ctx = canvas.getContext("2d");
 const audio = document.getElementById("gameAudio");
 const WIDTH = 1280;
 const HEIGHT = 720;
-const notesArray = [];
+var notesArray = [];
 const noteSpeed = 3.5; // Speed at which notes fall
-const bpm = 140; // Beats per minute
+const bpm = 128; // Beats per minute
 const beatTime = 60 / bpm; // Time for one beat in seconds
 const noteTypes = ["left", "up", "down", "right"];
-const noteSize = 50; // Uniform size for square notes
-const noteSpacing = 15; // Fixed separation between notes on X axis
+const noteSize = 55; // Uniform size for square notes
+const noteSpacing = 20; // Fixed separation between notes on X axis
 const hitRange = 50; // Range within which a note is considered hit
-const targetYPositionStart = 500; // New start of the hit zone
-const targetYPositionEnd = 600; // End of the hit zone
+const targetYPositionStart = 485; // New start of the hit zone
+const targetYPositionEnd = 615; // End of the hit zone
 // Early/Late and Perfect hit zones
-const perfectRange = 10; // 10 pixels on either side for perfect hit
+const perfectRange = 15; // 10 pixels on either side for perfect hit
 const targetYPosition = 600; // Y-position of stationary hit blocks
 let streak = 0;
 let maxStreak = 0;
@@ -26,6 +26,7 @@ let recordedNotes = []; // Store recorded notes
 let startTime; // Track game start time for recording
 let customNotes = []; // Store custom notes for playback
 let startRecordButton, stopRecordButton, autoHitButton, importButton, copyButton; // Buttons for recording, auto-hit, import, and copy
+let lastRecordedNotes = []; // To store the last 3 recorded notes
 
 // Track the state of highlighted stationary notes
 const highlightedNotes = {
@@ -57,6 +58,12 @@ noteTypes.forEach((type) => {
     images.notePress[type].src = `Resources/Note${type}Press.png`;
 });
 
+// Preload discolored images for recorded notes
+noteTypes.forEach((type) => {
+    images.note[`rec${type}`] = new Image();
+    images.note[`rec${type}`].src = `Resources/RecNote${type.charAt(0).toUpperCase() + type.slice(1)}.png`;
+});
+
 images.background.src = "Resources/starSystem.jpg";
 
 // Set keybinds
@@ -85,6 +92,11 @@ function generateNotes(duration) {
     const beatInterval = beatTime * 1000; // Convert to milliseconds
     const numberOfNotes = Math.floor(duration / beatInterval); // Calculate the number of notes
 
+    if (recording) {
+        console.log("Recording mode: No random notes are generated.");
+        return; // Skip note generation if recording
+    }
+
     if (customNotes.length > 0) {
         console.log("Playing custom recorded notes.");
         // Generate notes based on recorded custom notes
@@ -93,7 +105,7 @@ function generateNotes(duration) {
                 if (gameStarted) {
                     notesArray.push({
                         type: note.type,
-                        y: -50,
+                        y: -78,
                         x: noteXPositions[note.type] // Position based on custom X coordinates
                     });
                 }
@@ -121,21 +133,21 @@ function generateNotes(duration) {
     }
 }
 
-// Draw notes and stationary hit blocks on canvas
 function drawNotes() {
-    // Draw background image
     ctx.drawImage(images.background, 0, 0, canvas.width, canvas.height);
 
-    // Draw stationary hit blocks (Y position: 550)
+    // Draw stationary hit blocks
     noteTypes.forEach((type) => {
-        const x = noteXPositions[type]; // Use custom X coordinates
+        const x = noteXPositions[type];
         const imageToDraw = highlightedNotes[type] ? images.notePress[type] : images.note[type];
-        ctx.drawImage(imageToDraw, x, 550, noteSize, noteSize); // Stationary blocks
+        ctx.drawImage(imageToDraw, x, 550, noteSize, noteSize);
     });
 
-    // Draw falling notes
+    // Draw falling notes, including recorded "fake" notes
     notesArray.forEach((note) => {
-        ctx.drawImage(images.note[note.type], note.x, note.y, noteSize, noteSize); // Draw note with texture
+        // Check if it's a recorded note with discolored image
+        const noteImage = note.type.startsWith("rec") ? images.note[note.type] : images.note[note.type.replace("rec", "")];
+        ctx.drawImage(noteImage, note.x, note.y, noteSize, noteSize);
     });
 
     // Draw points on canvas
@@ -157,13 +169,27 @@ function drawNotes() {
         ctx.font = "30px Arial";
         ctx.fillText("Recording Notes", canvas.width / 2 - 100, 50); // Display text in the middle of the canvas
     }
+
+    // Display the last 3 recorded notes
+    if (lastRecordedNotes.length > 0) {
+        ctx.fillStyle = "yellow";
+        ctx.font = "18px Arial";
+        ctx.textAlign = "left";
+
+        // Reverse the array to display most recent note at the top
+        const reversedNotes = [...lastRecordedNotes].reverse();
+
+        reversedNotes.forEach((note, index) => {
+            ctx.fillText(note, 10, 60 + index * 20); // Display each note below the previous one
+        });
+    }
 }
 
-// Function to start recording
 function startRecording() {
     recording = true;
     console.log("Recording started.");
     recordedNotes = []; // Clear any previous recording
+    lastRecordedNotes = []; // Clear recent notes display
     localStorage.removeItem("recordedNotes"); // Clear saved notes in localStorage
     resetGame(); // Automatically reset the game when recording starts
     startTime = Date.now(); // Reset start time for accurate timestamps
@@ -196,7 +222,7 @@ function encodeNotes(notes) {
     return notes
         .map((note) => {
             const typeChar = noteTypeMap[note.type];
-            return `${typeChar}-${note.timestamp}`; // Encoding as "TypeChar-Time"
+            return `${typeChar}/${note.timestamp}`; // Encoding as "TypeChar-Time"
         })
         .join(",");
 }
@@ -204,7 +230,7 @@ function encodeNotes(notes) {
 // Decode the compact format back into an array of notes
 function decodeNotes(encodedNotes) {
     return encodedNotes.split(",").map((noteStr) => {
-        const [typeChar, timeStr] = noteStr.split("-");
+        const [typeChar, timeStr] = noteStr.split("/");
         return { type: reverseNoteTypeMap[typeChar], timestamp: parseInt(timeStr) }; // Parse time as integer
     });
 }
@@ -230,7 +256,7 @@ async function importNotes() {
             customNotes = notesArray;
             localStorage.setItem("recordedNotes", JSON.stringify(notesArray));
             console.log("Imported notes (array format):", notesArray);
-        } else if (clipboardText.includes("-")) {
+        } else if (clipboardText.includes("/")) {
             // Treat it as an encoded notes string
             const decodedNotes = decodeNotes(clipboardText);
             customNotes = decodedNotes;
@@ -279,7 +305,7 @@ function resetGame() {
     gameStarted = false; // Stop the game
     audio.pause(); // Pause audio
     audio.currentTime = 0; // Reset audio
-    notesArray.length = 0; // Clear notes array
+    notesArray = []; // Clear notes array
     points = 0; // Reset points
     customNotes = []; // Clear custom notes
 
@@ -330,7 +356,7 @@ window.onload = function () {
     document.body.appendChild(copyButton);
 };
 
-// Handle key press events (updated with hit zones)
+// Update the `keydown` event handler to store the last 3 recorded notes
 document.addEventListener("keydown", (event) => {
     const noteType = keyBindings[event.key.toUpperCase()];
     if (event.key === "Enter" && !gameStarted) {
@@ -343,6 +369,20 @@ document.addEventListener("keydown", (event) => {
                 type: noteType,
                 timestamp: timestamp
             });
+
+            // Update the last recorded notes for display
+            lastRecordedNotes.push(`Recorded: ${noteType}, at ${timestamp}ms`);
+            if (lastRecordedNotes.length > 10) {
+                lastRecordedNotes.shift(); // Keep only the last 10 entries
+            }
+
+            // Add a "fake" discolored note when recording
+            notesArray.push({
+                type: `rec${noteType}`, // Use discolored version
+                y: 550, // Spawn at the y position of the stationary notes
+                x: noteXPositions[noteType] // X position based on note type
+            });
+
             console.log(`Recorded note: ${noteType} at ${timestamp}ms`);
         }
 
@@ -352,9 +392,10 @@ document.addEventListener("keydown", (event) => {
         // Highlight the corresponding stationary note
         highlightedNotes[noteType] = true;
 
-        // Check for note hit
+        // Check for note hit (ignore fake notes)
         for (let i = 0; i < notesArray.length; i++) {
-            if (notesArray[i].type === noteType) {
+            if (notesArray[i].type === noteType && !notesArray[i].type.startsWith("rec")) {
+                // Skip fake notes
                 const noteY = notesArray[i].y;
 
                 if (noteY >= targetYPositionStart && noteY <= targetYPositionEnd) {
@@ -377,7 +418,7 @@ document.addEventListener("keydown", (event) => {
 
                     console.log(`${hitType} hit on note: ${noteType}`);
 
-                    playSoundEffect("Resources/SFX/hoverBtn.mp3", 1);
+                    playSoundEffect("Resources/SFX/hoverBtn.mp3", 0.3);
 
                     // Remove note after it's hit
                     notesArray.splice(i, 1);
@@ -417,11 +458,20 @@ function updateNotes(deltaTime) {
 
     for (let i = 0; i < notesArray.length; i++) {
         notesArray[i].y += adjustedNoteSpeed;
+
+        // Check if the note is off the screen
         if (notesArray[i].y > canvas.height) {
-            notesArray.splice(i, 1);
-            points--; // Decrease points for missed note
-            streak = 0;
-            i--;
+            // Ignore fake notes with the "rec" prefix
+            if (!notesArray[i].type.startsWith("rec")) {
+                notesArray.splice(i, 1);
+                points--; // Decrease points for missed note
+                streak = 0;
+                i--;
+            } else {
+                // Just remove fake notes, no scoring penalty
+                notesArray.splice(i, 1);
+                i--;
+            }
         }
     }
 
@@ -443,12 +493,11 @@ function simulateKeyPress(noteType) {
     if (key) {
         // Trigger key down event
         document.dispatchEvent(new KeyboardEvent("keydown", { key: key }));
-
-        // Wait 50 ms and trigger key up event
-        setTimeout(() => {
-            document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
-        }, 100);
     }
+
+    setTimeout(() => {
+        document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
+    }, 75);
 }
 
 // Start the game
