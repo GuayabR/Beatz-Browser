@@ -1,0 +1,19 @@
+name: Post Notes to GitHub
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+jobs:
+  post_notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Post notes
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.TOKEN_NOTE_POSTING }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/guayabr/beatz-2/issues \
+            -d '{"title": "Notes Title", "body": "Notes content here."}'
