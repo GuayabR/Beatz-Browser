@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -8,7 +8,9 @@
         <link rel="stylesheet" id="stylesheet" type="text/css" href="styles.css" />
         <style>
             canvas {
-                background: #000;
+                background: url("Resources/BeatzBanner.jpg");
+                background-size: cover;
+                background-position: center;
                 display: block;
                 margin: 0 auto;
             }
@@ -16,7 +18,13 @@
     </head>
     <body>
         <canvas id="myCanvas" width="1280" height="720"></canvas>
-        <audio id="gameAudio" src="Resources/Songs/Flow.mp3" preload="auto"></audio>
-        <script src="game.js"></script>
+        <button id="resetButton"></button>
+        <button id="recordButton"></button>
+        <button id="stopRecordingButton"></button>
+        <button id="toggleAutoHit"></button>
+        <button id="importButton"></button>
+        <button id="encodeButton"></button>
+        <audio id="song" src="Resources/Songs/Encompass.mp3" preload="auto"></audio>
+        <script src="Beatz.js"></script>
     </body>
 </html>
