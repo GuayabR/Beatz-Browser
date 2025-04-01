@@ -22,6 +22,13 @@ html {
     align-items: center;
 }
 
+#canvasContainer {
+    position: relative;
+    width: 1280px; /* Base width for the container */
+    height: 720px; /* Base height for the container */
+    margin: 0 auto; /* Center the container horizontally */
+}
+
 #backgroundOverlay {
     position: absolute;
     top: 0;
@@ -29,13 +36,17 @@ html {
     width: 100%;
     height: 100%;
     border-radius: 10px;
-    background-image: url("Resources/BeatzBanner.jpg");
+    background-image: url("Resources/BeatzBannerX.jpg");
     background-size: cover;
     background-position: center;
     z-index: 0; /* Place behind the canvas */
 }
 
 #myCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 1;
     display: block;
     border-radius: 10px;
@@ -59,6 +70,73 @@ html {
     background-color: rgba(0, 0, 0, 0);
 }
 
+.pop-up-modal {
+    display: none;
+    position: fixed;
+    z-index: 9;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    max-height: 125vh;
+    overflow: auto;
+    background-color: rgb(255, 255, 255);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.modal-content {
+    animation: bounceIn 0.4s ease-out;
+}
+
+.modal-content button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes bounceOut {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    60% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+}
+
+#presetModal {
+    display: none;
+    position: fixed;
+    z-index: 8;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(255, 255, 255);
+    background-color: rgba(0, 0, 0, 0);
+}
+
 .modal-content {
     background-color: #0000006c;
     margin: 8px auto;
@@ -70,6 +148,162 @@ html {
     color: rgb(255, 255, 255);
     font-size: 14px;
     backdrop-filter: blur(8px);
+}
+
+#canvasContainer:-moz-full-screen,
+#canvasContainer:-webkit-full-screen,
+#canvasContainer:-ms-fullscreen,
+#canvasContainer:fullscreen {
+    width: 100vw;
+    height: 100vh;
+}
+
+#myCanvas:-moz-full-screen,
+#myCanvas:-webkit-full-screen,
+#myCanvas:-ms-fullscreen,
+#myCanvas:fullscreen {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+#loadingBarContainer {
+    display: none;
+    height: 0px;
+    width: 50%;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    z-index: 10;
+    transform: translateX(-50%);
+    transition:
+        height 0.25s ease-out,
+        opacity 0.5s ease-in-out;
+    text-align: center;
+    overflow: hidden;
+}
+
+#loadingText {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 20px;
+}
+
+#loadingBar {
+    width: 0%;
+    height: 20px;
+    background-color: #006904;
+    text-align: center;
+    line-height: 20px;
+    color: white;
+    font-weight: bold;
+    transition:
+        width 0.05s linear,
+        height 0.25s ease-out;
+    position: relative;
+}
+
+@media (min-width: 769px) {
+    #loadingBarContainer {
+        width: 80%;
+        bottom: 20px;
+        left: 10%;
+        transform: none;
+    }
+
+    #loadingText {
+        font-size: 20px;
+    }
+
+    #loadingBar {
+        height: 25px;
+    }
+}
+
+@media (max-width: 768px) {
+    #loadingBarContainer {
+        width: 90%;
+        bottom: 10px;
+        left: 5%;
+        transform: none;
+    }
+
+    #loadingText {
+        font-size: 16px;
+    }
+
+    #loadingBar {
+        height: 20px;
+    }
+}
+
+.errorLogging {
+    display: none;
+    color: white;
+    padding: 10px;
+    margin: 5px;
+    width: fit-content;
+    text-align: left;
+    bottom: 5;
+    left: 5;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: "Poppins", sans-serif;
+    opacity: 1;
+    animation: fadein 0.5s forwards;
+}
+
+#errorContainer .errorLogging a {
+    color: #00bfff;
+    text-decoration: underline;
+}
+
+#errorContainer .errorLogging a:hover {
+    color: #9adaff;
+    text-decoration: underline;
+}
+
+@keyframes fadein {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeout {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+#registerForm,
+#loginForm {
+    margin: 20px 0;
+}
+
+#startButton {
+    padding: 10px 40px;
+    font-size: 20px;
+    background-color: #520047;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(146, 0, 190, 0.623);
+    transition: box-shadow 0.5s ease;
 }
 
 button {
@@ -96,4 +330,412 @@ button:disabled,
 #songSelector:disabled {
     background-color: rgba(128, 128, 128, 0.466);
     cursor: not-allowed;
+}
+
+#keybindsButton i {
+    transition: transform 0.3s ease;
+}
+
+#keybindsButton:hover i {
+    transform: rotate(90deg) scale(1.25);
+}
+
+button i {
+    transition: transform 0.3s ease;
+}
+
+button:hover i {
+    transform: scale(1.25);
+}
+
+.gradient-background {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.8));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.unsupported-message {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: red;
+    text-align: center;
+}
+
+#openSongListBTN {
+    font-size: 16px;
+    width: 175px;
+    height: 50px;
+}
+
+#openSongListBTN i {
+    margin-right: 2px;
+}
+
+#songListModal {
+    overflow: hidden;
+}
+
+#songListModal .modal-content {
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+#songListModal #songList {
+    max-height: 53vh;
+    overflow-y: auto;
+}
+
+.most-recent-button {
+    display: block;
+    width: 60%;
+    padding: 15px 15px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-size: 16px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
+    transition:
+        box-shadow 0.3s ease,
+        padding 0.3s ease;
+}
+
+.most-recent-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(221, 221, 221, 0.623);
+    transition: box-shadow 0.3s ease;
+}
+
+.song-button {
+    display: block;
+    font-family: Arial, sans-serif;
+    width: 90%;
+    padding: 15px 15px;
+    margin: 5px auto;
+    margin-bottom: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-size: 16px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
+    transition:
+        box-shadow 0.3s ease,
+        padding 0.3s ease;
+}
+
+.song-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(221, 221, 221, 0.623);
+    transition: box-shadow 0.3s ease;
+}
+
+#songListModal input[type="text"] {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    width: 75%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    font-size: 20px;
+    box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
+    text-align: center;
+    transition: box-shadow 0.3s ease;
+}
+
+#songListModal input[type="text"]::placeholder {
+    color: rgb(163, 163, 163);
+    text-align: center;
+}
+
+#songListModal input[type="text"]:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(248, 248, 248, 0.623);
+    transition: box-shadow 0.3s ease;
+}
+
+#songListModal input[type="text"]:hover {
+    box-shadow: 0 0 10px rgba(221, 221, 221, 0.623);
+    transition: box-shadow 0.3s ease;
+}
+
+.song-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    margin: 10px auto;
+    width: 95%;
+}
+
+#songCoverImage {
+    width: 450px;
+    height: 450px;
+}
+
+#selectedSongModal .modal-content {
+    font-size: 20px;
+}
+
+#noResultsTXT {
+    font-size: 20px;
+    color: gray;
+}
+
+#resultsForSearch {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.keybind-button {
+    float: left;
+    color: #ffffff;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    background: none;
+    box-shadow: 0 0px #00000000;
+    transition:
+        color 0.3s ease,
+        transform 0.3s ease;
+}
+
+.keybind-button:hover {
+    color: rgb(255, 86, 86);
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 0px #00000000;
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.undo-keybinds,
+.redo-keybinds {
+    margin-right: 5px;
+}
+
+.reset-keybinds:hover {
+    transform: rotate(360deg);
+}
+
+.undo-keybinds:hover {
+    transform: rotate(-360deg);
+}
+
+.redo-keybinds:hover {
+    transform: rotate(360deg);
+}
+
+#saveSettingsBtn {
+    background-color: #2222223f;
+    box-shadow: 0 0 5px rgba(111, 0, 145, 0.74);
+    transition: box-shadow 0.3s ease;
+}
+
+#saveSettingsBtn:hover {
+    box-shadow: 0 0 5px rgba(175, 0, 228, 0.74);
+    transition: box-shadow 0.3s ease;
+}
+
+.close {
+    color: #ffffff;
+    float: right;
+    font-size: 24px;
+    font-weight: bold;
+    transition:
+        color 0.3s ease,
+        transform 0.3s ease;
+}
+
+.close:hover {
+    color: rgb(255, 86, 86);
+    text-decoration: none;
+    cursor: pointer;
+    transform: scale(1.25);
+    transition:
+        color 0.2s ease,
+        transform 0.3s ease;
+}
+
+#keywordListButton {
+    float: left;
+    color: #ffffff;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    background: none;
+    box-shadow: 0 0px #dfdfdf3a;
+    transition:
+        color 0.3s ease,
+        transform 0.3s ease;
+}
+
+#keywordListButton:hover {
+    color: rgb(86, 255, 123);
+    text-decoration: none;
+    cursor: pointer;
+    transform: scale(1.25);
+    transition:
+        color 0.2s ease,
+        transform 0.3s ease;
+}
+
+#songSelector {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 10px;
+    margin: 1px 0;
+    box-sizing: border-box;
+    font-size: 16px;
+    box-shadow: 0 0 10px rgba(175, 0, 228, 0.74);
+    transition: box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+#songSelector:hover {
+    box-shadow: 0 0 20px rgba(175, 0, 228, 0.74);
+    transition: box-shadow 0.3s ease;
+}
+
+#songSelector:focus {
+    border-color: #ea00ff;
+    outline: none;
+    box-shadow: 0 0 10px rgba(183, 0, 255, 0.753);
+}
+
+#songSelector option {
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+}
+
+#songSelector option:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+#songSelector option:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.switch-modal {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+}
+
+.switch-left {
+    left: 10px;
+}
+
+.switch-right {
+    right: 10px;
+}
+
+.shared-form input[type="text"],
+.shared-form input[type="number"],
+.shared-form select {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 8px;
+    margin: 1px 10px;
+    box-sizing: border-box;
+    font-size: 14px;
+    box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
+    transition:
+        box-shadow 0.3s ease,
+        padding ease 0.3s;
+}
+
+.shared-form input[type="text"]::placeholder,
+.shared-form input[type="number"]::placeholder {
+    color: rgb(163, 163, 163);
+}
+
+.shared-form input[type="text"]:focus,
+.shared-form input[type="number"]:focus,
+.shared-form select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(248, 248, 248, 0.623);
+    transition:
+        box-shadow 0.3s ease,
+        padding ease 0.3s;
+}
+
+.shared-form input[type="text"]:hover,
+.shared-form input[type="number"]:hover,
+.shared-form select:hover {
+    box-shadow: 0 0 10px rgba(221, 221, 221, 0.623);
+    padding: 8px 12px;
+    transition:
+        box-shadow 0.3s ease,
+        padding ease 0.3s;
+}
+
+.shared-form select {
+    margin: 1px 0;
+}
+
+.shared-form select option {
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+}
+
+.shared-form select option:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.volume-control {
+    margin: 20px 0;
+    color: #ea00ff;
+}
+
+.volume-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 15px;
+    color: white;
+}
+
+.volume-control input[type="range"] {
+    width: 50%;
+    margin-bottom: 5px;
+    box-shadow: 0 0 0px rgba(160, 160, 160, 0);
+    transition: box-shadow 0.3s ease;
+    cursor: pointer;
 }
