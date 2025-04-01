@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -6,22 +6,13 @@
         <link rel="icon" type="image/x-icon" href="Resources/favicon.png" />
         <link rel="stylesheet" id="stylesheet" type="text/css" href="styles.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <style>
-            canvas {
-                background: url("Resources/BeatzBanner.jpg");
-                background-size: cover;
-                background-position: center;
-                display: block;
-                margin: 0 auto;
-            }
-        </style>
     </head>
     <body>
         <div id="canvasContainer">
             <canvas id="myCanvas" width="1280" height="720"></canvas>
             <div id="backgroundOverlay"></div>
         </div>
-        <button id="resetButton" onclick="resetGame()">Reset Game</button>
+        <button id="resetButton" onclick="startGame()">Start Game</button>
         <button id="recordButton" onclick="startRecording()">Start Recording</button>
         <button id="stopRecordingButton" onclick="stopRecording()" style="display: none">Stop Recording</button>
         <button id="toggleAutoHit" onclick="toggleAutoHit()">Toggle Auto Hit</button>
@@ -37,56 +28,18 @@
         <button id="changePressedNote" onclick="changePressStyle()">Change Pressed Note Style</button>
         <button id="changeRecordingNote" onclick="changeRecStyle()">Change Recording Note Style</button>
         <button id="changeStaticNote" onclick="changeStaticStyle()">Change Static Note Style</button>
-        <button id="openSongListBTN"><i class="fa-solid fa-music" id="bouncingIcon"></i> Song list!</button>
-        <audio id="song" src="Resources/Songs/I KNOW.mp3" preload="auto"></audio>
+        <audio id="song" src="Resources/Songs/2024.mp3" preload="auto"></audio>
 
-        <div id="songListModal" class="modal">
+        <div id="importExportModal" class="pop-up-modal">
             <div class="modal-content">
-                <span id="closeSongListModal" class="close"><i class="fa-solid fa-xmark"></i></span>
-                <span id="keywordListButton"><i class="fa-regular fa-circle-question"></i></span>
-                <div class="modal-header">
-                    <h1 class="modal-title">Song List</h1>
-                </div>
-                <label for="songSearchInput">Search songs by keyword, index, album, or artist.</label><br /><br />
-                <label for="songSearchInput" id="pressEnter">Press "Enter" to play first result.</label><br /><br />
-                <input type="text" id="songSearchInput" placeholder="Search..." oninput="filterSongs()" /><br /><br />
-                <div id="resultsForSearch" style="display: none">Results found</div>
-                <button type="button" id="mostRecent" class="most-recent-button" style="display: none">Play most recent song</button>
-                <div id="noResultsTXT" style="display: none">No results found for your search.</div>
-                <br /><br />
-                <div class="modal-body" id="songList">
-                    <!-- Song buttons will be dynamically inserted here -->
-                </div>
+                <span id="closeNotePopUpModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <h2 id="modalTitle">Import Notes</h2>
+                <button id="modalFileButton">Open File</button>
+                <button id="modalClipboardButton">Use Clipboard</button>
             </div>
         </div>
 
-        <!-- Selected Song Modal -->
-        <div id="selectedSongModal" class="modal">
-            <div class="modal-content">
-                <span id="closeSelectedSongModal" class="close"><i class="fa-solid fa-xmark"></i></span>
-                <h2 id="songTitle">Song Title</h2>
-                <div class="row align-items-center">
-                    <div class="col-auto">
-                        <img id="songCoverImage" src="" alt="Cover Image not found or your browser doesn't support HTML5 images." class="img-fluid" />
-                    </div>
-                    <div class="col">
-                        <p><strong>Artist:</strong> <span id="songArtist">Artist Name</span></p>
-                        <p><strong>BPM:</strong> <span id="songBPM">120</span></p>
-                        <p>
-                            <span id="speedTXT"><strong>Note Speed:</strong></span> <span id="songSpeed">15.5</span>
-                        </p>
-                        <div id="versionDropdownContainer" style="display: none">
-                            <label for="versionDropdown"><strong>Choose version:</strong></label>
-                            <select id="versionDropdown"></select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="playSongButton" title="Press 'Enter' to play.">Play song!</button>
-                </div>
-            </div>
-        </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
         <script src="Beatz.js"></script>
     </body>
 </html>
