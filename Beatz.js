@@ -12,7 +12,7 @@ var noteOffset = 0;
 let noteSpawnY = 60;
 let hitType;
 let hitTypeID = -2;
-let BPM = 118; // Beats per minute
+let BPM = 130; // Beats per minute
 let beattime = (60 / BPM) * 1000;
 let noteMode = 4;
 const noteTypes = [
@@ -735,7 +735,7 @@ function drawNotes() {
         if (noteType === "beatLine") {
             if (beatLineImage && beatLineImage.complete && beatLineImage.naturalWidth !== 0) {
                 ctx.globalAlpha = beatLineOpacity;
-                ctx.drawImage(beatLineImage, note.x - 400, note.y, 800, 5);
+                ctx.drawImage(beatLineImage, note.x - 400, note.y + noteSize / 2, 800, 5);
                 ctx.globalAlpha = 1;
             }
             return; // Skip the rest of the function
@@ -791,7 +791,7 @@ function drawNotes() {
     }
 
     // Set initial Y position
-    let yOffset = 110;
+    let yOffset = 90;
 
     if (!recording) {
         ctx.fillStyle = "white";
@@ -803,32 +803,29 @@ function drawNotes() {
     // Draw accuracy & points
     ctx.fillStyle = "white";
     ctx.textAlign = "left";
-    ctx.font = "30px Poppins";
+    ctx.font = "25px Poppins";
     ctx.fillText(`Accuracy: ${accuracy.toFixed(2)}%`, 10, 30);
 
     const roundedPoints = Math.round(points);
     const pointsText = roundedPoints.toLocaleString();
-    ctx.fillText(`Points: ${pointsText}`, 10, 70);
+    ctx.fillText(`Points: ${pointsText}`, 10, 60);
 
-    // Conditionally draw "insane's"
-    if (insanes > 0) {
-        ctx.font = "34px Poppins";
-        ctx.fillText(`INSANES: ${insanes}`, 10, yOffset);
-        yOffset += 40; // Increase spacing for next text
-    }
-
-    // Draw the rest dynamically
-    const textLines = [
+    // Dynamically draw stats only if they are greater than 0
+    const stats = [
+        { label: "EXACTs", value: exactHits },
+        { label: "INSANEs", value: insanes },
         { label: "Perfects", value: perfects },
         { label: "Early", value: earlys },
         { label: "Lates", value: lates },
         { label: "Misses", value: misses }
     ];
 
-    ctx.font = "30px Poppins";
-    textLines.forEach((line) => {
-        ctx.fillText(`${line.label}: ${line.value}`, 10, yOffset);
-        yOffset += 40; // Space each line by 40 pixels
+    ctx.font = "25px Poppins";
+    stats.forEach((stat) => {
+        if (stat.value > 0) {
+            ctx.fillText(`${stat.label}: ${stat.value}`, 10, yOffset);
+            yOffset += 30; // Increase spacing for next text
+        }
     });
 
     // Current + Max streak
@@ -960,6 +957,143 @@ function handleFadedNotes() {
             }, fadeDuration / fadeSteps); // Update opacity every frame
         }
     });
+}
+
+let songMetadata = []; // Array to store metadata
+
+function getSongTitle(songPath) {
+    // Ensure songPath is a string
+    if (typeof songPath !== "string") {
+        console.log("songPath is not a string:", songPath);
+        return songPath;
+    }
+
+    // Extract the file name without the directory path
+    let fileName = songPath.split("/").pop();
+    // Remove the file extension
+    fileName = fileName.replace(".mp3", "").replace(".jpg", "").replace("_", "'");
+
+    // Decode the URI component (for URL-encoded characters like %20 for spaces)
+    let decodedTitle = decodeURIComponent(fileName);
+
+    // Return the decoded title
+    return decodedTitle;
+}
+
+function readMP3Metadata(filePath) {
+    fetch(filePath)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`Failed to fetch file: ${response.statusText}`);
+            }
+            return response.blob(); // Convert response to Blob
+        })
+        .then((blob) => {
+            jsmediatags.read(blob, {
+                onSuccess: (tag) => {
+                    console.log("Metadata:", tag.tags); // Debugging output
+
+                    const { title, artist, album, BPM, picture } = tag.tags;
+                    console.log("Cover:", picture); // Check if cover exists
+
+                    // Get the song title from metadata or fallback to filename
+                    const songTitle = title && title.trim() !== "" ? title : getSongTitle(filePath);
+
+                    // Add metadata to songMetadata array
+                    songMetadata = {
+                        title: songTitle,
+                        artist: artist || "Unknown Artist",
+                        album: album || "Unknown Album",
+                        bpm: BPM || "N/A",
+                        cover: picture ? getBase64Image(picture) : null // Set cover if available
+                    };
+
+                    drawSongInfo(); // Update UI after loading metadata
+                },
+                onError: (error) => {
+                    console.error("Error reading metadata:", error);
+
+                    // If metadata reading fails, use file name as title
+                    songMetadata = {
+                        title: getSongTitle(filePath),
+                        artist: "Unknown Artist",
+                        album: "Unknown Album",
+                        bpm: "N/A",
+                        cover: null
+                    };
+
+                    currentSong = new Audio(filePath);
+                    drawSongInfo();
+                }
+            });
+        })
+        .catch((error) => console.error("Error fetching file:", error));
+}
+
+function getBase64Image(picture) {
+    if (!picture || !picture.data) return null; // If no picture or data, return null
+
+    const uint8Array = new Uint8Array(picture.data);
+    let binary = "";
+    for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+    }
+    return `data:${picture.format};base64,${btoa(binary)}`; // Return as base64 encoded string
+}
+
+function drawSongInfo() {
+    if (!songMetadata) return;
+
+    const padding = 10;
+    const fontSize = 20;
+    const xPos = WIDTH - 10;
+    let yPos = 30;
+
+    ctx.fillStyle = "white";
+    ctx.font = `${fontSize}px Poppins`;
+    ctx.textAlign = "right";
+
+    ctx.fillText(songMetadata.title || "Unknown Title", WIDTH - padding, yPos);
+    yPos += fontSize + 5;
+
+    // Skip album text if the album is self-titled or the same as the song title (for singles)
+    if (songMetadata.album && songMetadata.album !== songMetadata.artist && songMetadata.album !== songMetadata.title) {
+        ctx.fillText(`${songMetadata.artist || "Unknown Artist"} | ${songMetadata.album || "Unknown Album"}`, WIDTH - padding, yPos);
+        yPos += fontSize + 5;
+    } else if (songMetadata.album && songMetadata.album !== songMetadata.title) {
+        ctx.fillText(`${songMetadata.artist || "Unknown Artist"} | ${songMetadata.album || "Unknown Album"}`, WIDTH - padding, yPos);
+        yPos += fontSize + 5;
+    } else {
+        ctx.fillText(`${songMetadata.artist || "Unknown Artist"}`, WIDTH - padding, yPos);
+        yPos += fontSize + 5;
+    }
+
+    // Modify image loading and fallback mechanism
+    function loadImage(src, fallback) {
+        let img = new Image();
+        img.onload = () => ctx.drawImage(img, WIDTH - 190 + 180 / 2, 92 + 180 / 2, 100, 100);
+        img.onerror = () => { if (fallback) fallback(); }; // Silently fail and try fallback
+        img.src = src;
+    }
+
+    // Check if there's no cover, then fallback to searching for the song's file name
+    if (songMetadata.cover) {
+        loadImage(songMetadata.cover, () =>
+            loadImage(`Resources/Covers/${songMetadata.album}.jpg`, () =>
+                loadImage(`Resources/Covers/${songMetadata.title}.jpg`, () =>
+                    loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () =>
+                        // Replace special chars in filename
+                        loadImage("Resources/Covers/noCover.png")
+                    )
+                )
+            )
+        );
+    } else {
+        loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () => loadImage("Resources/Covers/noCover.png"));
+    }
+
+    yPos += 100 + 10;
+    ctx.fillText(`Note Speed: ${noteSpeed.toFixed(2)} / BPM: ${BPM || "N/A"}`, WIDTH - padding, yPos);
 }
 
 function startRecording() {
@@ -1152,33 +1286,42 @@ async function importBeatzFile(event) {
     reader.readAsText(file);
 }
 
-// Prompt the user for import choice and then call the appropriate function
 document.getElementById("importButton").addEventListener("click", () => {
-    const importChoice = prompt("How would you like to import the notes? Type 'clip' to import from clipboard, or 'file' to import from a .beatz file.");
-
-    if (importChoice === "clip") {
-        importNotes();
-    } else if (importChoice === "file") {
-        document.getElementById("fileInput").click(); // Opens file picker
-    } else {
-        alert("Invalid choice. Please type 'clipboard' or 'file'.");
-    }
+    openModal("Import Notes", importNotes, () => document.getElementById("fileInput").click(), "Import from Clipboard", "Import from File");
 });
+
+document.getElementById("encodeButton").addEventListener("click", () => {
+    openModal("Export Notes", copyNotesToClipboard, exportNotesToFile, "Export to Clipboard", "Export to File");
+});
+
+document.getElementById("closeNotePopUpModal").addEventListener("click", closeModal);
+
+function openModal(title, clipboardAction, fileAction, clipText, fileText) {
+    const modal = document.getElementById("importExportModal");
+    const modalContent = document.querySelector(".modal-content");
+
+    document.getElementById("modalTitle").innerText = title;
+    document.getElementById("modalClipboardButton").innerText = clipText;
+    document.getElementById("modalFileButton").innerText = fileText;
+    document.getElementById("modalClipboardButton").onclick = clipboardAction;
+    document.getElementById("modalFileButton").onclick = fileAction;
+
+    modal.style.display = "block";
+    modalContent.style.animation = "bounceIn 0.4s ease-out";
+}
+
+function closeModal() {
+    const modal = document.getElementById("importExportModal");
+    const modalContent = document.querySelector(".modal-content");
+
+    modalContent.style.animation = "bounceOut 0.4s ease-in";
+
+    setTimeout(() => {
+        modal.style.display = "none";
+    }, 398); // Wait for the bounce-out animation to complete before hiding
+}
 
 document.getElementById("fileInput").addEventListener("change", importBeatzFile);
-
-// Function to handle exporting notes
-document.getElementById("encodeButton").addEventListener("click", () => {
-    const exportChoice = prompt("How would you like to export the notes? Type 'clip' to export to clipboard, or 'file' to export to a .beatz file.");
-
-    if (exportChoice === "clip") {
-        copyNotesToClipboard(); // Call your existing function to export to clipboard
-    } else if (exportChoice === "file") {
-        exportNotesToFile(); // Call the new function to export to a file
-    } else {
-        alert("Invalid choice. Please type 'clip' or 'file'.");
-    }
-});
 
 // Function to export notes to a file
 function exportNotesToFile() {
@@ -1429,7 +1572,6 @@ document.addEventListener("keydown", (event) => {
     // If game is not started and Enter is pressed (without Ctrl + Shift), start the game
     if (!gameStarted && event.code === "Enter") {
         startGame();
-        backgroundOverlay.style.backgroundImage = 'url("Resources/defaultBG.png")';
     }
 
     let key = event.code; // Use event.code to differentiate keys
@@ -1536,26 +1678,25 @@ document.addEventListener("keydown", (event) => {
                         hitTypeID = -1;
                         exactHits++; // Count exact hits properly
                         hitArray.exact.push({ type: notes[i].type, timestamp: savedtimestamp });
+                        notes.splice(i, 1);
                     } else if (distanceFromCenter <= absolutePerfectRange) {
                         // 🎯 INSANE hit
                         hitType = "INSANE";
                         hitTypeID = 0;
                         insanes++;
                         hitArray.insane.push({ type: notes[i].type, timestamp: savedtimestamp });
+                        notes.splice(i, 1);
                     } else if (distanceFromCenter <= perfectRange) {
                         // 🌟 PERFECT hit
                         hitType = "Perfect!";
                         hitTypeID = 1;
                         perfects++;
                         hitArray.hitPerfect.push({ type: notes[i].type, timestamp: savedtimestamp });
+                        notes.splice(i, 1);
                     } else {
                         // ⏳ EARLY / LATE hits
                         hitType = noteY < targetYPosition ? "Early" : "Late";
                         hitTypeID = noteY < targetYPosition ? "3" : "2";
-
-                        const earnedPoints = calculatePoints(distanceFromCenter);
-                        points += earnedPoints;
-                        console.log(`Points earned: ${earnedPoints.toFixed(2)} (${hitType})`);
 
                         if (hitType === "Early") {
                             earlys++;
@@ -1570,22 +1711,17 @@ document.addEventListener("keydown", (event) => {
                         handleFadedNotes();
                     }
 
+                    showHitType(hitType);
+                    lastHitDistance = noteY - targetYPosition; // Use exact center
+                    updateAccuracy(distanceFromCenter);
+
+                    updateNoteProgress();
+                    onNoteHit();
+
                     // ✅ Calculate points after detecting hit type
                     const earnedPoints = calculatePoints(distanceFromCenter);
                     points += earnedPoints;
                     console.log(`Points earned: ${earnedPoints.toFixed(2)} (${hitType})`);
-
-                    // ✅ Remove the note immediately for exact/insane/perfect hits
-                    if (hitType === "EXACT" || hitType === "INSANE" || hitType === "Perfect!") {
-                        notes.splice(i, 1);
-                    }
-
-                    showHitType(hitType);
-                    lastHitDistance = noteY - targetYPosition; // Use exact center
-                    updateAccuracy(lastHitDistance);
-
-                    updateNoteProgress();
-                    onNoteHit();
 
                     streak++;
                     if (pulseToHits) {
@@ -1597,7 +1733,7 @@ document.addEventListener("keydown", (event) => {
                         maxStreak = streak;
                     }
 
-                    break; // Stop checking after hitting one note
+                    break;
                 }
             }
         }
@@ -1696,7 +1832,7 @@ function drawAccuracyBar(distanceFromCenter, deltaTime) {
 }
 
 function updateAccuracy(distanceFromCenter) {
-    const totalHits = insanes + perfects + lates + earlys + misses;
+    const totalHits = exactHits + insanes + perfects + lates + earlys + misses;
 
     if (totalHits > 0) {
         let accuracyPoints = 0;
@@ -1708,7 +1844,7 @@ function updateAccuracy(distanceFromCenter) {
         }
 
         // Weighted hits calculation with different weights for insane and perfect hits
-        const weightedHits = insanes + perfects + lates * accuracyPoints + earlys * accuracyPoints;
+        const weightedHits = exactHits + insanes + perfects + lates * accuracyPoints + earlys * accuracyPoints;
         accuracy = (weightedHits / totalHits) * 100;
     } else {
         accuracy = 100;
@@ -1717,7 +1853,7 @@ function updateAccuracy(distanceFromCenter) {
 
 function updateNoteProgress() {
     const totalNotes = customNotes.length > 0 ? customNotes.length : numberOfNotes;
-    const totalHits = insanes + perfects + earlys + lates;
+    const totalHits = exactHits + insanes + perfects + earlys + lates;
 
     if (totalHits > 0) {
         noteProgress = (totalHits / totalNotes) * 100;
@@ -1766,7 +1902,7 @@ function updateNotes(deltaTime) {
         notes.forEach((note) => {
             if (note.type == "beatLine" || note.type.includes("Rec")) return;
 
-            if (note.y > 498 && !note.faded) {
+            if (note.y > 500 && !note.faded) {
                 // realistic Math.random() * (565 - 465) + 465
                 simulateKeyPress(note.type); // Only auto-hit non-faded notes
             }
@@ -1822,7 +1958,11 @@ function startGame() {
     starttime = Date.now();
     generateNotes();
 
+    backgroundOverlay.style.backgroundImage = 'url("Resources/defaultBG.png")';
+
     previousHits = [];
+
+    readMP3Metadata(currentSong.src);
 
     lastTime = performance.now(); // ✅ Properly reset lastTime
     requestAnimationFrame(gameLoop);
@@ -1883,13 +2023,11 @@ function newBpmPulseInterval(newBpm, fontSizeIncrease = 0, smallFSincrease = 0, 
         }, beattime * 0.15);
 
         // Generate beatLine every beat time
-        setTimeout(() => {
-            notes.push({
-                type: "beatLine",
-                y: -noteSpawnY,
-                x: WIDTH / 2 // Centered
-            });
-        }, 320);
+        notes.push({
+            type: "beatLine",
+            y: -noteSpawnY,
+            x: WIDTH / 2 // Centered
+        });
     }, beattime);
 
     console.log("Applied new BPM pulse with increases:", fontSizeIncrease, smallFSincrease, bmpPulseFSincrease, pulseBPMinterval);
@@ -1954,6 +2092,7 @@ function gameLoop(currentTime) {
     if (gameStarted) {
         updateNotes(deltaTime);
         drawNotes();
+        drawSongInfo();
         requestAnimationFrame(gameLoop);
     }
 
@@ -2071,4 +2210,3 @@ function gameLoop(currentTime) {
 
     if (!recording) drawAccuracyBar(lastHitDistance, deltaTime);
 }
-
