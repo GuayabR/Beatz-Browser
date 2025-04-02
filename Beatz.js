@@ -535,6 +535,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateNoteImages();
 
+    readMP3Metadata(currentSong.src);
+
     document.getElementById("importButton").addEventListener("click", importBeatzFile);
 });
 
@@ -1961,8 +1963,6 @@ function startGame() {
     backgroundOverlay.style.backgroundImage = 'url("Resources/defaultBG.png")';
 
     previousHits = [];
-
-    readMP3Metadata(currentSong.src);
 
     lastTime = performance.now(); // ✅ Properly reset lastTime
     requestAnimationFrame(gameLoop);
