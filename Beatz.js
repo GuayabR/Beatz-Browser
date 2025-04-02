@@ -962,85 +962,102 @@ function handleFadedNotes() {
 }
 
 let songMetadata = []; // Array to store metadata
+let cachedCover = null; // Cache for the loaded cover image
 
 function getSongTitle(songPath) {
-    // Ensure songPath is a string
     if (typeof songPath !== "string") {
         console.log("songPath is not a string:", songPath);
         return songPath;
     }
 
-    // Extract the file name without the directory path
     let fileName = songPath.split("/").pop();
-    // Remove the file extension
     fileName = fileName.replace(".mp3", "").replace(".jpg", "").replace("_", "'");
 
-    // Decode the URI component (for URL-encoded characters like %20 for spaces)
-    let decodedTitle = decodeURIComponent(fileName);
-
-    // Return the decoded title
-    return decodedTitle;
+    return decodeURIComponent(fileName);
 }
 
 function readMP3Metadata(filePath) {
     fetch(filePath)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`Failed to fetch file: ${response.statusText}`);
-            }
-            return response.blob(); // Convert response to Blob
+        .then(response => {
+            if (!response.ok) throw new Error(`Failed to fetch file: ${response.statusText}`);
+            return response.blob();
         })
-        .then((blob) => {
+        .then(blob => {
             jsmediatags.read(blob, {
-                onSuccess: (tag) => {
-                    console.log("Metadata:", tag.tags); // Debugging output
-
-                    const { title, artist, album, BPM, picture } = tag.tags;
-                    console.log("Cover:", picture); // Check if cover exists
-
-                    // Get the song title from metadata or fallback to filename
+                onSuccess: tag => {
+                    console.log("Metadata:", tag.tags);
+                    const { title, artist, album, picture } = tag.tags;
+                    
                     const songTitle = title && title.trim() !== "" ? title : getSongTitle(filePath);
 
-                    // Add metadata to songMetadata array
                     songMetadata = {
                         title: songTitle,
                         artist: artist || "Unknown Artist",
                         album: album || "Unknown Album",
-                        bpm: BPM || "N/A",
-                        cover: picture ? getBase64Image(picture) : null // Set cover if available
+                        cover: picture ? getBase64Image(picture) : null
                     };
 
-                    drawSongInfo(); // Update UI after loading metadata
+                    cachedCover = null; // Reset cached image when a new song is loaded
+                    loadCoverImage(); // Load cover image once
+                    drawSongInfo();
                 },
-                onError: (error) => {
+                onError: error => {
                     console.error("Error reading metadata:", error);
-
-                    // If metadata reading fails, use file name as title
                     songMetadata = {
                         title: getSongTitle(filePath),
                         artist: "Unknown Artist",
                         album: "Unknown Album",
-                        bpm: "N/A",
                         cover: null
                     };
 
-                    currentSong = new Audio(filePath);
+                    cachedCover = null;
+                    loadCoverImage();
                     drawSongInfo();
                 }
             });
         })
-        .catch((error) => console.error("Error fetching file:", error));
+        .catch(error => console.error("Error fetching file:", error));
 }
 
 function getBase64Image(picture) {
-    if (!picture || !picture.data) return null; // If no picture or data, return null
-
+    if (!picture || !picture.data) return null;
     const uint8Array = new Uint8Array(picture.data);
     let binary = "";
     for (let i = 0; i < uint8Array.length; i++) {
         binary += String.fromCharCode(uint8Array[i]);
     }
-    return `data:${picture.format};base64,${btoa(binary)}`; // Return as base64 encoded string
+    return `data:${picture.format};base64,${btoa(binary)}`;
+}
+
+// **Load Cover Image Only Once**
+function loadCoverImage() {
+    if (cachedCover !== null) return; // **Prevent reloading if already loaded**
+    
+    function loadImage(src, fallback) {
+        let img = new Image();
+        img.onload = () => {
+            cachedCover = img; // **Store loaded image**
+            drawSongInfo(); // **Redraw UI with loaded image**
+        };
+        img.onerror = () => { if (fallback) fallback(); };
+        img.src = src;
+    }
+
+    if (songMetadata.cover) {
+        loadImage(songMetadata.cover, () =>
+            loadImage(`Resources/Covers/${songMetadata.album}.jpg`, () =>
+                loadImage(`Resources/Covers/${songMetadata.title}.jpg`, () =>
+                    loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () =>
+                        loadImage("Resources/Covers/noCover.png")
+                    )
+                )
+            )
+        );
+    } else {
+        loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () =>
+            loadImage("Resources/Covers/noCover.png")
+        );
+    }
 }
 
 function drawSongInfo() {
@@ -1048,7 +1065,6 @@ function drawSongInfo() {
 
     const padding = 10;
     const fontSize = 20;
-    const xPos = WIDTH - 10;
     let yPos = 30;
 
     ctx.fillStyle = "white";
@@ -1058,45 +1074,23 @@ function drawSongInfo() {
     ctx.fillText(songMetadata.title || "Unknown Title", WIDTH - padding, yPos);
     yPos += fontSize + 5;
 
-    // Skip album text if the album is self-titled or the same as the song title (for singles)
     if (songMetadata.album && songMetadata.album !== songMetadata.artist && songMetadata.album !== songMetadata.title) {
         ctx.fillText(`${songMetadata.artist || "Unknown Artist"} | ${songMetadata.album || "Unknown Album"}`, WIDTH - padding, yPos);
-        yPos += fontSize + 5;
-    } else if (songMetadata.album && songMetadata.album !== songMetadata.title) {
-        ctx.fillText(`${songMetadata.artist || "Unknown Artist"} | ${songMetadata.album || "Unknown Album"}`, WIDTH - padding, yPos);
-        yPos += fontSize + 5;
     } else {
         ctx.fillText(`${songMetadata.artist || "Unknown Artist"}`, WIDTH - padding, yPos);
-        yPos += fontSize + 5;
     }
 
-    // Modify image loading and fallback mechanism
-    function loadImage(src, fallback) {
-        let img = new Image();
-        img.onload = () => ctx.drawImage(img, WIDTH - 190 + 180 / 2, 92 + 180 / 2, 100, 100);
-        img.onerror = () => { if (fallback) fallback(); }; // Silently fail and try fallback
-        img.src = src;
-    }
+    yPos += fontSize + 5;
 
-    // Check if there's no cover, then fallback to searching for the song's file name
-    if (songMetadata.cover) {
-        loadImage(songMetadata.cover, () =>
-            loadImage(`Resources/Covers/${songMetadata.album}.jpg`, () =>
-                loadImage(`Resources/Covers/${songMetadata.title}.jpg`, () =>
-                    loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () =>
-                        // Replace special chars in filename
-                        loadImage("Resources/Covers/noCover.png")
-                    )
-                )
-            )
-        );
-    } else {
-        loadImage(`Resources/Covers/${getSongTitle(currentSong.src)}.jpg`, () => loadImage("Resources/Covers/noCover.png"));
+    // **Draw the cached cover image (if loaded)**
+    if (cachedCover) {
+        ctx.drawImage(cachedCover, WIDTH - 190 + 180 / 2, 92 + 180 / 2, 100, 100);
     }
 
     yPos += 100 + 10;
     ctx.fillText(`Note Speed: ${noteSpeed.toFixed(2)} / BPM: ${BPM || "N/A"}`, WIDTH - padding, yPos);
 }
+
 
 function startRecording() {
     recording = true;
