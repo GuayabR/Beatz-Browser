@@ -1084,7 +1084,7 @@ function drawSongInfo() {
 
     // **Draw the cached cover image (if loaded)**
     if (cachedCover) {
-        ctx.drawImage(cachedCover, WIDTH - 190 + 180 / 2, 92 + 180 / 2, 100, 100);
+        ctx.drawImage(cachedCover, WIDTH - 110 , 50, 100, 100);
     }
 
     yPos += 100 + 10;
@@ -2084,9 +2084,9 @@ function gameLoop(currentTime) {
     frameCount++;
 
     if (gameStarted) {
-        updateNotes(deltaTime);
-        drawNotes();
         drawSongInfo();
+        drawNotes();
+        updateNotes(deltaTime);
         requestAnimationFrame(gameLoop);
     }
 
