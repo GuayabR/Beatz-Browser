@@ -1084,10 +1084,10 @@ function drawSongInfo() {
 
     // **Draw the cached cover image (if loaded)**
     if (cachedCover) {
-        ctx.drawImage(cachedCover, WIDTH - 110 , 50, 100, 100);
+        ctx.drawImage(cachedCover, WIDTH - 210 , 60, 200, 200);
     }
 
-    yPos += 100 + 10;
+    yPos += 200 + 10;
     ctx.fillText(`Note Speed: ${noteSpeed.toFixed(2)} / BPM: ${BPM || "N/A"}`, WIDTH - padding, yPos);
 }
 
