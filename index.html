@@ -9,10 +9,29 @@
     </head>
     <body>
         <div id="canvasContainer">
+            <canvas id="canvas-1" width="1280" height="720"></canvas>
             <canvas id="myCanvas" width="1280" height="720"></canvas>
+            <canvas id="canvas2" width="1280" height="720"></canvas>
+            <canvas id="canvas3" width="1280" height="720"></canvas>
             <div id="backgroundOverlay"></div>
         </div>
-        <button id="resetButton" onclick="startGame()">Start Game</button>
+
+        <button id="startButton" onclick="startGame()">Play! <i class="fa-solid fa-play"></i></button>
+        <button id="myYoutube" title="My YouTube! (@GuayabR)" style="display: none" onclick="NewTab()"><i class="fa-brands fa-youtube"></i></button>
+        <button id="githubRepo" title="GitHub Repository for Beatz! Where you can download the game for offline use!" style="display: none">
+            <i class="fa-brands fa-github"></i>
+        </button>
+        <button id="toggleNoteStyleButton" title="Toggle Note Style (Arrows / Circles)" onclick="changeNoteStyle()" style="display: none">
+            <i class="fa-solid fa-arrow-up" style="display: none"></i>
+            <i class="fa-solid fa-circle" style="display: none"></i>
+        </button>
+        <button id="previousButton" title="Previous Song" style="display: none"><i class="fa-solid fa-backward-fast"></i></button>
+        <button id="restartButton" onclick="resetGame()" title="Restart Song" style="display: none"><i class="fa-solid fa-repeat"></i></button>
+        <button id="nextButton" title="Next Song" style="display: none"><i class="fa-solid fa-forward-fast"></i></button>
+        <button id="randomizeButton" title="Randomize Song" onclick="randomizeChart()" style="display: none"><i class="fa-solid fa-shuffle"></i></button>
+        <button id="toggleAutoHit" onclick="toggleAutoHit()" style="display: none">Toggle Auto Hit</button>
+        <button id="fullscreen" title="Toggle Fullscreen" style="display: none" onclick="toggleFullscreen()"><i class="fa-solid fa-expand"></i></button>
+        <button id="settingsButton" title="Game Settings" style="display: none"><i class="fa-solid fa-gear"></i></button><br /><br />
         <button id="recordButton" onclick="startRecording()">Start Recording</button>
         <button id="stopRecordingButton" onclick="stopRecording()" style="display: none">Stop Recording</button>
         <button id="toggleAutoHit" onclick="toggleAutoHit()">Toggle Auto Hit</button>
@@ -22,24 +41,737 @@
 
         <button id="encodeButton">Export Notes</button>
         <br /><br />
-        <button id="toggleFullscrenButton" onclick="toggleFullscreen()">Toggle Fullscreen</button>
         <button id="changeNote" onclick="changeNoteStyle()">Change All Note Style</button>
         <button id="changeFallingNote" onclick="changeFallingNoteStyle()">Change Falling Note Style</button>
         <button id="changePressedNote" onclick="changePressStyle()">Change Pressed Note Style</button>
         <button id="changeRecordingNote" onclick="changeRecStyle()">Change Recording Note Style</button>
         <button id="changeStaticNote" onclick="changeStaticStyle()">Change Static Note Style</button>
-        <audio id="song" src="Resources/Songs/2024.mp3" preload="auto"></audio>
+        <audio id="song" src="Resources/Songs/NADA DE NADA.mp3" preload="auto"></audio>
 
-        <div id="importExportModal" class="pop-up-modal">
+        <div id="popUpModal" class="pop-up-modal">
             <div class="modal-content">
-                <span id="closeNotePopUpModal" class="close"><i class="fa-solid fa-xmark"></i></span>
-                <h2 id="modalTitle">Import Notes</h2>
-                <button id="modalFileButton">Open File</button>
-                <button id="modalClipboardButton">Use Clipboard</button>
+                <span id="closePopUpModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <h2 id="modalTitle">Title</h2>
+                <div id="modalLabels"></div>
+                <!-- To append labels dynamically -->
+                <div id="modalButtons"></div>
+                <!-- To append buttons dynamically -->
+            </div>
+        </div>
+
+        <div id="songVol" class="volume-control" style="display: none">
+            <label for="songVolume">Song Volume</label>
+            <input type="range" id="songVolume" name="songVolume" min="0" max="100" value="50" />
+        </div>
+
+        <div id="hitSoundVol" class="volume-control" style="display: none">
+            <label id="hitSoundVol" for="hitSoundSlider">Hit Sound volume:</label>
+            <input type="range" id="hitSoundSlider" name="hitSoundSlider" min="0" max="100" value="50" />
+        </div>
+        <br /><br />
+
+        <div id="contactBtn">
+            <button id="contactbtn" onclick="email()"><i class="fa-solid fa-envelope"></i> Contact</button>
+        </div>
+
+        <div id="miscSettingsModal" class="modal" style="display: none">
+            <div class="modal-content">
+                <span id="closeSettings" class="close"><i class="fa-solid fa-xmark"></i></span>
+
+                <h1>Miscellaneous Settings</h1>
+
+                <form id="settingsForm">
+                    <label for="noteOffset">Note Offset:</label><br />
+                    <input type="number" id="noteOffset" value="0" /><br /><br />
+
+                    <label for="resumeDelay">Delay when Resuming:</label><br />
+                    <input type="number" id="resumeDelay" value="1000" /><br /><br />
+
+                    <label for="noteSize">Note Size:</label><br />
+                    <input type="number" id="noteSize" value="74" /><br /><br />
+
+                    <label for="beatLineOpacity">Beat Line Opacity</label><br />
+                    <input type="number" step="0.001" id="beatLineOpacity" value="0.175" /><br /><br />
+
+                    <label for="pulseToBPM">Pulse Text to BPM?</label>
+                    <input type="checkbox" id="pulseToBPM" checked />
+
+                    <label for="pulseToHits">Pulse Text to Hits?</label>
+                    <input type="checkbox" id="pulseToHits" checked />
+
+                    <label for="pulseNotesOnClick">Pulse Notes to Clicks?</label>
+                    <input type="checkbox" id="pulseNotesOnClick" checked />
+
+                    <label for="pulseNotesOnHit">Pulse Notes to Hits?</label>
+                    <input type="checkbox" id="pulseNotesOnHit" />
+
+                    <label for="pulseBGtoBPM">Pulse background to Song?</label>
+                    <input type="checkbox" id="pulseBGtoBPM" checked /><br /><br />
+
+                    <label for="maxNoteSize">Maximum Note Size:</label>
+                    <input type="number" id="maxNoteSize" value="90" />
+
+                    <label for="maxFontSize">Maximum Text Font Size</label>
+                    <input type="number" id="maxFontSize" value="64" />
+
+                    <label for="maxBpmPulseFontSize">maxBpmPulseFontSize</label>
+                    <input type="number" id="maxBpmPulseFontSize" value="64" />
+
+                    <label for="maxHitPulseFontSize">maxHitPulseFontSize</label>
+                    <input type="number" id="maxHitPulseFontSize" value="64" />
+
+                    <label for="maxSmallFontSize">maxSmallFontSize</label>
+                    <input type="number" id="maxSmallFontSize" value="35" /><br /><br />
+
+                    <label for="fadeOutHitTypeText">fadeOutHitTypeText</label>
+                    <input type="checkbox" id="fadeOutHitTypeText" checked />
+
+                    <label for="fadeEarlyLateNotes">fadeEarlyLateNotes</label>
+                    <input type="checkbox" id="fadeEarlyLateNotes" />
+
+                    <label for="fadeSpawnedNotes">fadeSpawnedNotes</label><br />
+                    <input type="checkbox" id="fadeSpawnedNotes" checked /><br /><br />
+
+                    <label for="accurateAutoHit">accurateAutoHit</label><br />
+                    <input type="checkbox" id="accurateAutoHit" checked /><br /><br />
+
+                    <label for="drawLanes">drawLanes</label>
+                    <input type="checkbox" id="drawLanes" />
+
+                    <label for="upscroll">upscroll</label>
+                    <input type="checkbox" id="upscroll" /><br /><br />
+
+                    <label for="doubleInputPrevention">doubleInputPrevention</label><br />
+                    <input type="checkbox" id="doubleInputPrevention" checked /><br /><br />
+
+                    <label for="flashNotesOnHit">flashNotesOnHit</label><br />
+                    <input type="checkbox" id="flashNotesOnHit" checked /><br /><br />
+
+                    <label for="colorFlashWithTypes">colorFlashWithTypes</label><br />
+                    <input type="checkbox" id="colorFlashWithTypes" checked /><br /><br />
+
+                    <label for="flashWithTypes">flashWithTypes (CSV)</label><br />
+                    <input type="text" id="flashWithTypes" value="EXACT,INSANE" /><br /><br />
+
+                    <label for="exactTypeColor">exactTypeColor</label><br />
+                    <input type="color" id="exactTypeColor" value="#00ff00" /><br /><br />
+
+                    <label for="insaneTypeColor">insaneTypeColor</label><br />
+                    <input type="color" id="insaneTypeColor" value="#ffd700" /><br /><br />
+
+                    <label for="perfectTypeColor">perfectTypeColor</label><br />
+                    <input type="color" id="perfectTypeColor" value="#64c8ff" /><br /><br />
+
+                    <label for="earlyTypeColor">earlyTypeColor</label><br />
+                    <input type="color" id="earlyTypeColor" value="#64ffff" /><br /><br />
+
+                    <label for="lateTypeColor">lateTypeColor</label><br />
+                    <input type="color" id="lateTypeColor" value="#64ffff" /><br /><br />
+
+                    <label for="flashNotesOnClick">flashNotesOnClick</label><br />
+                    <input type="checkbox" id="flashNotesOnClick" /><br /><br />
+
+                    <label for="clickFlashColor">clickFlashColor</label><br />
+                    <input type="color" id="clickFlashColor" value="#ffffff" /><br /><br />
+                </form>
+            </div>
+        </div>
+
+        <button id="openSongListBTN"><i class="fa-solid fa-music" id="bouncingIcon"></i> Song list!</button>
+
+        <div id="songListModal" class="modal">
+            <div class="modal-content">
+                <span id="closeSongListModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <span id="keywordListButton"><i class="fa-regular fa-circle-question"></i></span>
+                <div class="modal-header">
+                    <h1 class="modal-title">Song List</h1>
+                </div>
+                <label for="songSearchInput">Search songs by keyword, index, album, or artist.</label><br /><br />
+                <label for="songSearchInput" id="pressEnter">Press "Enter" to play first result.</label><br /><br />
+                <input type="text" id="songSearchInput" placeholder="Search..." oninput="filterSongs()" /><br /><br />
+                <div id="resultsForSearch" style="display: none">Results found</div>
+                <button type="button" id="mostRecent" class="most-recent-button" style="display: none">Play most recent song</button>
+                <div id="noResultsTXT" style="display: none">No results found for your search.</div>
+                <br /><br />
+                <div class="modal-body" id="songList">
+                    <!-- Song buttons will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyword List Modal -->
+        <div id="keywordListModal" class="pop-up-modal">
+            <div class="modal-content">
+                <span id="closeKeywordListModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <div class="modal-header">
+                    <h1 class="modal-title">Keyword List</h1>
+                </div>
+                <div class="modal-body" id="keywordDescriptions">
+                    <!-- Keyword descriptions will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Song Modal -->
+        <div id="selectedSongModal" class="modal">
+            <div class="modal-content">
+                <span id="closeSelectedSongModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <h2 id="songTitle">Song Title</h2>
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <img id="songCoverImage" src="" alt="Cover Image not found or your browser doesn't support HTML5 images." class="img-fluid" />
+                    </div>
+                    <div class="col">
+                        <p><strong>Artist:</strong> <span id="songArtist">Artist Name</span></p>
+                        <p><strong>BPM:</strong> <span id="songBPM">120</span></p>
+                        <p>
+                            <span id="speedTXT"><strong>Note Speed:</strong></span> <span id="songSpeed">15.5</span>
+                        </p>
+                        <div id="versionDropdownContainer" style="display: none">
+                            <label for="versionDropdown"><strong>Choose version:</strong></label>
+                            <select id="versionDropdown"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="playSongButton" title="Press 'Enter' to play.">Play song!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Button to Open the Modal -->
+        <button id="openCustomSongModal">Add your Custom Song!</button>
+
+        <!-- Modal Structure -->
+        <div id="customSongModal" class="modal">
+            <div class="modal-content">
+                <span id="closeCustomSongModal" class="close"><i class="fa-solid fa-xmark"></i></span>
+                <h1>Add Custom Song</h1>
+                <label for="customSongTitle">Title:</label>
+                <input type="text" id="customSongTitle" placeholder="Enter song title" /><br /><br />
+
+                <label for="songFile">Upload Song File:</label>
+                <input type="file" id="songFile" accept=".mp3" /><br /><br />
+
+                <label for="videoFile">Upload Video File (Optional):</label>
+                <input type="file" id="videoFile" accept=".mp4" /><br /><br />
+
+                <label for="chartFile">Chart (Optional):</label>
+                <input type="file" id="chartFile" accept=".beatz" /><br />
+                <label for="chartFile">If not chart is set, note recording will start</label><br /><br />
+
+                <label for="noteSpeed">Note Speed:</label>
+                <input type="number" id="noteSpeed" min="1" max="50" placeholder="Enter note speed" /><br /><br />
+
+                <label for="noteSpawnY">Note Spawn Y:</label>
+                <input type="number" id="noteSpawnY" min="1" max="50" placeholder="Enter note speed" /><br /><br />
+
+                <label for="bpm">BPM:</label>
+                <input type="number" id="bpm" min="1" max="1000" placeholder="Enter BPM" /><br /><br />
+
+                <button id="createCustomSong">Create Custom Song!</button>
             </div>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+        <script src="BeatzSettings.js"></script>
+        <script src="BeatzInit.js"></script>
+        <script src="BeatzMobile.js"></script>
+
         <script src="Beatz.js"></script>
+        <script>
+            function getSongTitle(songPath) {
+                // Ensure songPath is a string
+                if (typeof songPath !== "string") {
+                    console.log("songPath is not a string:", songPath);
+                    return songPath;
+                }
+
+                // Extract the file name without the directory path
+                let fileName = songPath.split("/").pop();
+                // Remove the file extension
+                fileName = fileName.replace(".mp3", "").replace(".jpg", "").replace("_", "'");
+                // Decode the URI component
+                let decodedTitle = decodeURIComponent(fileName);
+                return decodedTitle;
+            }
+            const openCustomSongModalButton = document.getElementById("openCustomSongModal");
+            const customSongModal = document.getElementById("customSongModal");
+            const closeCustomSongModalButton = document.getElementById("closeCustomSongModal");
+            const createCustomSongButton = document.getElementById("createCustomSong");
+
+            const customSongTitleInput = document.getElementById("customSongTitle");
+            const songFileInput = document.getElementById("songFile");
+            const videoFileInput = document.getElementById("videoFile");
+            const chartFileInput = document.getElementById("chartFile");
+            const noteSpeedInput = document.getElementById("noteSpeed");
+            const noteSpawnYinput = document.getElementById("noteSpawnY");
+            const bpmInput = document.getElementById("bpm");
+
+            // Open the modal when the button is clicked
+            openCustomSongModalButton.addEventListener("click", () => {
+                customSongModal.style.display = "block";
+            });
+
+            // Close the modal when the close button is clicked
+            closeCustomSongModalButton.addEventListener("click", () => {
+                customSongModal.style.display = "none";
+            });
+
+            // Close the modal when clicking outside of the modal content
+            window.addEventListener("click", (event) => {
+                if (event.target === customSongModal) {
+                    customSongModal.style.display = "none";
+                }
+            });
+
+            // Handle the creation of the custom song
+            createCustomSongButton.addEventListener("click", () => {
+                let title = customSongTitleInput.value.trim();
+                let mp3File = songFileInput.files[0];
+                let videoFile = videoFileInput.files[0];
+                let cahrtFile = chartFileInput.files[0];
+                let noteSpeed = noteSpeedInput.value ? parseInt(noteSpeedInput.value) : 3;
+                let noteSpawnY = noteSpawnYinput.value ? parseInt(noteSpawnYinput.value) : 10;
+                let bpm = bpmInput.value ? parseInt(bpmInput.value) : 120;
+
+                // If title is not entered, use the file name as the title
+                if (!title) {
+                    if (mp3File) {
+                        title = mp3File.name.replace(".mp3", "");
+                    } else if (videoFile) {
+                        title = videoFile.name.replace(".mp4", "");
+                    }
+                }
+
+                // If no song (MP3) and no video is provided, show an alert
+                if (!mp3File && !videoFile) {
+                    alert("Please upload either an MP3 file or a video file.");
+                    return;
+                }
+
+                // Use the video file as the audio if MP3 is not provided
+                if (!mp3File && videoFile) {
+                    startGame(false, true); // Call playGame(false) to use video sound as the song
+                } else if (mp3File) {
+                    // If MP3 is provided, handle song loading
+                    const songPath = URL.createObjectURL(mp3File);
+                    currentSong.src = songPath;
+                    startGame(false, true);
+                }
+
+                // Pass the custom song details to whatever function you need to handle it
+                // This might involve adding the custom song to a list, saving it, etc.
+                // Example: saveCustomSong(title, noteSpeed, bpm, mp3File, videoFile);
+
+                // Close the modal after creating the song
+                customSongModal.style.display = "none";
+            });
+
+            function addCustomSong() {}
+
+            function startRecording() {
+                recording = true;
+                autoHitEnabled = false;
+                console.log("Recording started.");
+                recordedNotes = [];
+                lastRecordedNotes = [];
+                noteMode = 8;
+                noteSpeed = 4;
+
+                resetGame(true); // Reset game before recording
+
+                requestAnimationFrame(() => {
+                    starttimestamp = Date.now();
+
+                    var startRecordButton = document.getElementById("recordButton");
+                    var stopRecordButton = document.getElementById("stopRecordingButton");
+
+                    startRecordButton.style.display = "none";
+                    stopRecordButton.style.display = "inline-block";
+                });
+            }
+
+            // Function to stop recording and save notes
+            function stopRecording() {
+                recording = false;
+                console.log("Recording stopped.");
+
+                // Save recorded notes to localStorage
+                if (recordedNotes.length > 0) {
+                    localStorage.removeItem("recordedNotes"); // Clear saved notes in localStorage
+                    localStorage.setItem("recordedNotes", JSON.stringify({ notes: recordedNotes }));
+                    customNotes = { notes: [] };
+                    customNotes = recordedNotes;
+
+                    console.log("Saved notes:", recordedNotes);
+                    console.log(customNotes);
+                } else console.log("No notes were recorded.");
+
+                targetYPosition = 500;
+                noteMode = 4;
+
+                var startRecordButton = document.getElementById("recordButton");
+                var stopRecordButton = document.getElementById("stopRecordingButton");
+
+                // Show start button, hide stop button
+                startRecordButton.style.display = "inline-block";
+                stopRecordButton.style.display = "none";
+            }
+
+            // Helper function to capitalize the first letter of a string
+            function capitalizeFirstLetter(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            function decodeBeatzFile(content) {
+                const sections = content.split("\\");
+                if (sections.length === 1) {
+                    // fallback if actual backslashes were used
+                    sections = content.split(/\\\\|\\/);
+                }
+
+                let song = "";
+                let charter = "";
+                let decodedNoteMode = 0;
+                let decodedBPM = 0;
+                let decodedNoteSpeed = 0;
+                let decodedNoteSpawnY = 0;
+                let notesLine = "";
+
+                sections.forEach((section) => {
+                    if (section.startsWith("Song:")) {
+                        song = section.replace("Song:", "").trim();
+                    } else if (section.startsWith("Charter:")) {
+                        charter = section.replace("Charter:", "").trim();
+                    } else if (section.startsWith("noteMode:")) {
+                        decodedNoteMode = parseInt(section.replace("noteMode:", "").trim(), 10);
+                    } else if (section.startsWith("BPM:")) {
+                        decodedBPM = parseInt(section.replace("BPM:", "").trim(), 10);
+                    } else if (section.startsWith("noteSpeed:")) {
+                        decodedNoteSpeed = parseFloat(section.replace("noteSpeed:", "").trim(), 10);
+                    } else if (section.startsWith("noteSpawnY:")) {
+                        decodedNoteSpawnY = parseInt(section.replace("noteSpawnY:", "").trim(), 10);
+                    } else if (section.startsWith("Notes:")) {
+                        notesLine = section.replace("Notes:", "").trim();
+                    }
+                });
+
+                let notesFromFile = [];
+
+                if (notesLine.includes("/")) {
+                    notesFromFile = notesLine
+                        .split(",")
+                        .map((noteStr) => {
+                            // Updated regex to handle normal notes and effect notes
+                            const match = noteStr.match(/((?:S)?[LRUD]{1,2}|E|RND)\/(\d+)(?:!([^,]+))?/);
+
+                            if (!match) return null;
+
+                            console.log("Notes match the pattern.", match, noteStr);
+
+                            const [_, typeChar, timestampStr, propertiesStr] = match;
+                            let noteObj = {
+                                type: typeChar === "E" ? "Effect" : typeChar === "RND" ? "Random" : capitalizeFirstLetter(reverseNoteTypeMap[typeChar]),
+                                timestamp: parseInt(timestampStr, 10),
+                                newShake: undefined,
+                                newBPM: undefined,
+                                newSpeed: undefined,
+                                newSpawnY: undefined,
+                                FSinc: undefined,
+                                smallFSinc: undefined,
+                                bpmPulseInc: undefined,
+                                ownSpeed: undefined,
+                                ownSpawnY: undefined
+                            };
+
+                            if (propertiesStr) {
+                                // Split properties into key-value pairs and apply them
+                                propertiesStr.split(";").forEach((prop) => {
+                                    const [key, value] = prop.split("=");
+
+                                    if (key && value !== undefined) {
+                                        const cleanKey = key.replace(/^!/, "");
+                                        if (cleanKey === "ownSpeed") {
+                                            noteObj.ownSpeed = parseFloat(value);
+                                        } else if (cleanKey === "ownSpawnY") {
+                                            noteObj.ownSpawnY = parseInt(value, 10);
+                                        } else if (cleanKey === "shake") {
+                                            const [s, spd, dur, fade] = value.split(".").map(Number);
+                                            noteObj.shake = {
+                                                strength: s,
+                                                speed: spd,
+                                                duration: dur,
+                                                fade: fade
+                                            };
+                                        } else {
+                                            noteObj[cleanKey] = isNaN(value) ? value : parseFloat(value);
+                                        }
+                                    }
+                                });
+                            }
+
+                            return noteObj;
+                        })
+                        .filter((note) => note !== null); // Filter out null values for malformed notes
+                }
+
+                return {
+                    song,
+                    charter,
+                    decodedNoteMode,
+                    decodedBPM,
+                    decodedNoteSpeed,
+                    decodedNoteSpawnY,
+                    decodedNotes: notesFromFile
+                };
+            }
+
+            async function importBeatzFile(event) {
+                const file = event.target.files[0];
+                if (!file || !file.name.endsWith(".beatz")) {
+                    alert("Please select a valid .beatz file.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const { song, charter, decodedNotes, decodedNoteMode, decodedBPM, decodedNoteSpeed, decodedNoteSpawnY } = decodeBeatzFile(content);
+
+                    customNotes = decodedNotes;
+                    noteMode = decodedNoteMode;
+                    BPM = decodedBPM;
+                    noteSpeed = decodedNoteSpeed;
+                    noteSpawnY = decodedNoteSpawnY;
+                    songCharter = charter;
+
+                    localStorage.setItem(
+                        "recordedBeatzFileData",
+                        JSON.stringify({
+                            song,
+                            fileCharter: charter,
+                            fileNoteMode: noteMode,
+                            fileBPM: decodedBPM,
+                            fileNoteSpeed: decodedNoteSpeed,
+                            fileNoteSpawnY: decodedNoteSpawnY,
+                            fileNotes: customNotes
+                        })
+                    );
+
+                    // Find the song in "Resources/Songs" and set it to currentSong.src
+                    const songPath = `Resources/Songs/${song}.mp3`;
+                    const songFile = new Audio(songPath);
+                    if (songFile.canPlayType) {
+                        currentSong.src = songPath; // Set the source of the current song\
+                        //readMP3Metadata(songPath);
+                    } else {
+                        throw new Error(`Song "${song}" not found in "Resources/Songs".`);
+                    }
+
+                    localStorage.setItem("recordedNotes", JSON.stringify({ notes: customNotes }));
+
+                    console.log("Imported Song:", song);
+                    console.log("Charter:", charter);
+                    console.log("Note Mode:", decodedNoteMode);
+                    console.log("Decoded Notes:", decodedNotes);
+                    console.log("BPM:", decodedBPM);
+                    console.log("Note Speed:", decodedNoteSpeed);
+                    console.log("Note Spawn Y:", decodedNoteSpawnY);
+
+                    alert("Notes imported successfully.");
+                };
+
+                reader.readAsText(file);
+            }
+
+            document.getElementById("importButton").addEventListener("click", () => {
+                openModal("Import Notes", importNotes, () => document.getElementById("fileInput").click(), "Import from Clipboard", "Import from File");
+            });
+
+            document.getElementById("encodeButton").addEventListener("click", () => {
+                openModal("Export Notes", copyNotesToClipboard, exportNotesToFile, "Export to Clipboard", "Export to File");
+            });
+
+            document.getElementById("closePopUpModal").addEventListener("click", closePopUpModal);
+
+            function openModal(title, clipboardAction, fileAction, clipText, fileText) {
+                // Dynamically create the modal using the pop-up modal preset
+                createPopUpModal({
+                    title: title,
+                    labels: [],
+                    buttons: [
+                        {
+                            text: fileText,
+                            onClick: fileAction
+                        },
+                        {
+                            text: clipText,
+                            onClick: clipboardAction
+                        }
+                    ]
+                });
+            }
+
+            document.getElementById("fileInput").addEventListener("change", importBeatzFile);
+
+            // Function to export notes to a file
+            function exportNotesToFile() {
+                const savedNotes = localStorage.getItem("recordedNotes");
+                if (!savedNotes) {
+                    window.alert("No custom notes found in localStorage. Record some!");
+                    return;
+                }
+
+                const notes = JSON.parse(savedNotes);
+                const encodedNotes = encodeNotes(notes.notes || notes); // Encode only the note array part
+
+                // Determine the noteMode based on the types of notes
+                let userNoteMode = 4; // Default value
+                const noteTypes = encodedNotes.split(","); // Assuming encodedNotes are comma-separated
+
+                // Check if any of the notes contain DL, DR, UL, or UR
+                noteTypes.forEach((note) => {
+                    if (note.includes("DL") || note.includes("DR")) {
+                        userNoteMode = 6;
+                    } else if (note.includes("UL") || note.includes("UR")) {
+                        userNoteMode = 8;
+                    }
+                });
+
+                const username = prompt("Type username:");
+                const songName = getSongTitle(currentSong.src);
+                const userBPM = BPM;
+                const userNoteSpeed = prompt("Type Note Speed:");
+                const userNoteSpawnY = prompt("Type Spawn of Notes (Y position):");
+
+                // Format the content in the required structure
+                const content = `Song: ${songName}\\Charter: ${username}\\noteMode: ${userNoteMode}\\BPM: ${userBPM}\\noteSpeed: ${userNoteSpeed}\\noteSpawnY: ${userNoteSpawnY}\\Notes:${encodedNotes}`;
+
+                // Create a Blob with the content
+                const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+
+                // Create a temporary link to trigger the download
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `${songName}-${username}.beatz`; // Set the download filename
+                link.click(); // Trigger the download
+
+                alert(`Notes exported to ${songName}-${username}.beatz successfully.`);
+            }
+
+            function encodeNotes(notes) {
+                return notes
+                    .map((note) => {
+                        const type = capitalizeFirstLetter(note.type);
+                        const typeChar = noteTypeMap[type];
+                        const base = `${typeChar}/${note.timestamp}`;
+                        return note.hold ? `${base}!hold=${note.hold}` : base;
+                    })
+                    .join(",");
+            }
+
+            // Decode the compact format back into an array of notes
+            function decodeNotes(encodedNotes) {
+                const decodedNotes = encodedNotes.split(",").map((noteStr) => {
+                    const [typeChar, timestampStr] = noteStr.split("/");
+                    return {
+                        type: capitalizeFirstLetter(reverseNoteTypeMap[typeChar]),
+                        timestamp: parseInt(timestampStr)
+                    };
+                });
+
+                return { notes: decodedNotes };
+            }
+
+            async function importNotes() {
+                try {
+                    const clipboardText = await navigator.clipboard.readText();
+
+                    if (isValidJSONArray(clipboardText)) {
+                        // If it's valid JSON and an array, treat it as a regular notes array
+                        const notes = JSON.parse(clipboardText);
+
+                        if (Array.isArray(notes) && notes.length > 0 && notes[0].notes) {
+                            // Handle the specific array of objects format with "notes" property
+                            customNotes = notes[0].notes; // Load the "notes" array
+                        } else if (Array.isArray(notes)) {
+                            // Directly load the notes if it's an array
+                            customNotes = notes.notes || notes; // Load the notes
+                        } else {
+                            throw new Error("Invalid JSON structure: Expected an array or an object with a 'notes' property.");
+                        }
+
+                        localStorage.setItem("recordedNotes", JSON.stringify({ notes: customNotes }));
+                        console.log("Imported notes (array format):", customNotes);
+
+                        // Show confirmation popup
+                        window.alert("Imported notes successfully.");
+                    } else if (clipboardText.includes("{") && clipboardText.includes("notes")) {
+                        // Handle object with a "notes" property
+                        const notesObject = JSON.parse(clipboardText);
+
+                        if (notesObject.notes && Array.isArray(notesObject.notes)) {
+                            customNotes = notesObject.notes; // Load the "notes" array
+
+                            localStorage.setItem("recordedNotes", JSON.stringify({ notes: customNotes }));
+                            console.log("Imported notes (object with 'notes' property):", customNotes);
+
+                            // Show confirmation popup
+                            window.alert("Imported notes successfully.");
+                        } else {
+                            throw new Error("Invalid JSON structure: 'notes' property must be an array.");
+                        }
+                    } else if (clipboardText.includes("/")) {
+                        // Treat it as an encoded notes string
+                        const decoded = decodeNotes(clipboardText);
+                        customNotes = decoded.notes;
+                        localStorage.setItem("recordedNotes", JSON.stringify({ notes: decoded.notes }));
+                        console.log("Imported notes (encoded format):", decoded.notes);
+
+                        // Show confirmation popup
+                        window.alert("Imported notes successfully.");
+                    } else {
+                        console.error("Clipboard data is not in a recognized format.");
+
+                        // Show confirmation popup
+                        if (
+                            window.confirm(
+                                "Notes are not in a recognized format. (Clipboard must be an array, or an encoded format like 'T (type)/timestamp'). Do you wish to see the pasted clipboard text?"
+                            )
+                        ) {
+                            window.alert(clipboardText);
+                            console.log(clipboardText);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to read clipboard data:", err);
+                    window.alert("Failed to read clipboard data.", err);
+                }
+            }
+
+            // Copy recorded notes to clipboard in the custom encoded format
+            function copyNotesToClipboard() {
+                const savedNotes = localStorage.getItem("recordedNotes");
+                if (!savedNotes) {
+                    window.alert("No custom notes found in localStorage. Record some!");
+                    return;
+                }
+
+                const notes = JSON.parse(savedNotes);
+                const encodedNotes = encodeNotes(notes.notes || notes); // Encode only the note array part
+
+                navigator.clipboard
+                    .writeText(`${encodedNotes}`)
+                    .then(() => {
+                        console.log("Copied encoded notes to clipboard in encoded format:", encodedNotes);
+                        window.alert("Saved notes to clipboard succesfully.");
+                    })
+                    .catch((err) => {
+                        console.error("Failed to copy notes to clipboard:", err);
+                        window.alert("Failed to copy notes to clipboard.", err);
+                    });
+            }
+        </script>
     </body>
 </html>
