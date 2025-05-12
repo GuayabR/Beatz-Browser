@@ -97,7 +97,7 @@ canvas.fullscreenCanvas {
     width: 1900px; /* big enough to fill corners while rotating */
     height: 1900px;
     transform: translate(-50%, -50%);
-    animation: albumSpin 60s linear infinite;
+    animation: albumSpin 120s linear infinite;
     z-index: 0; /* just above the background, below canvas */
     filter: brightness(0.3);
     border-radius: 0; /* optional: set to 0 for full coverage */

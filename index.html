@@ -273,8 +273,10 @@
             </div>
         </div>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
         <script src="BeatzSettings.js"></script>
         <script src="BeatzInit.js"></script>
+        <script src="BeatzMobile.js"></script>
 
         <script src="Beatz.js"></script>
         <script>
@@ -431,6 +433,7 @@
 
                 let song = "";
                 let charter = "";
+                let chartName = "";
                 let decodedNoteMode = 0;
                 let decodedBPM = 0;
                 let decodedNoteSpeed = 0;
@@ -442,6 +445,8 @@
                         song = section.replace("Song:", "").trim();
                     } else if (section.startsWith("Charter:")) {
                         charter = section.replace("Charter:", "").trim();
+                    } else if (section.startsWith("ChartName:")) {
+                        chartName = section.replace("ChartName:", "").trim();
                     } else if (section.startsWith("noteMode:")) {
                         decodedNoteMode = parseInt(section.replace("noteMode:", "").trim(), 10);
                     } else if (section.startsWith("BPM:")) {
@@ -517,6 +522,7 @@
                 return {
                     song,
                     charter,
+                    chartName,
                     decodedNoteMode,
                     decodedBPM,
                     decodedNoteSpeed,
@@ -535,7 +541,8 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const content = e.target.result;
-                    const { song, charter, decodedNotes, decodedNoteMode, decodedBPM, decodedNoteSpeed, decodedNoteSpawnY } = decodeBeatzFile(content);
+                    const { song, charter, chartName, decodedNotes, decodedNoteMode, decodedBPM, decodedNoteSpeed, decodedNoteSpawnY } =
+                        decodeBeatzFile(content);
 
                     customNotes = decodedNotes;
                     noteMode = decodedNoteMode;
@@ -549,6 +556,7 @@
                         JSON.stringify({
                             song,
                             fileCharter: charter,
+                            fileChartName: chartName,
                             fileNoteMode: noteMode,
                             fileBPM: decodedBPM,
                             fileNoteSpeed: decodedNoteSpeed,
@@ -571,6 +579,7 @@
 
                     console.log("Imported Song:", song);
                     console.log("Charter:", charter);
+                    console.log("Chart name:", chartName);
                     console.log("Note Mode:", decodedNoteMode);
                     console.log("Decoded Notes:", decodedNotes);
                     console.log("BPM:", decodedBPM);
@@ -638,13 +647,14 @@
                 });
 
                 const username = prompt("Type username:");
+                const userChartName = prompt("Type chart name:");
                 const songName = getSongTitle(currentSong.src);
                 const userBPM = BPM;
                 const userNoteSpeed = prompt("Type Note Speed:");
                 const userNoteSpawnY = prompt("Type Spawn of Notes (Y position):");
 
                 // Format the content in the required structure
-                const content = `Song: ${songName}\\Charter: ${username}\\noteMode: ${userNoteMode}\\BPM: ${userBPM}\\noteSpeed: ${userNoteSpeed}\\noteSpawnY: ${userNoteSpawnY}\\Notes:${encodedNotes}`;
+                const content = `Song: ${songName}\\Charter: ${username}\\ChartName: ${userChartName}\\noteMode: ${userNoteMode}\\BPM: ${userBPM}\\noteSpeed: ${userNoteSpeed}\\noteSpawnY: ${userNoteSpawnY}\\Notes:${encodedNotes}`;
 
                 // Create a Blob with the content
                 const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -652,10 +662,10 @@
                 // Create a temporary link to trigger the download
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = `${songName}-${username}.beatz`; // Set the download filename
+                link.download = `${userChartName}-${username}.beatz`; // Set the download filename
                 link.click(); // Trigger the download
 
-                alert(`Notes exported to ${songName}-${username}.beatz successfully.`);
+                alert(`Notes exported to ${userChartName}-${username}.beatz successfully.`);
             }
 
             function encodeNotes(notes) {

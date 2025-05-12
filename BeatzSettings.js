@@ -8,6 +8,8 @@
 
 var noteOffset = 0;
 
+var doubleClickTime = 65; // in milliseconds
+
 let resumeDelay = 1000;
 
 var noteSize = 74; // Uniform size for square notes
@@ -32,12 +34,19 @@ let pulseBGtoBPM = true;
 
 var pulseNotesOnClick = true;
 var pulseNotesOnHit = false;
+var pulseNotesOutwards = true;
 
 var maxNoteSize = 90;
+var minNoteSize = 65;
 var maxFontSize = 64;
 var maxBpmPulseFontSize = 64;
 var maxHitPulseFontSize = 64;
 var maxSmallFontSize = 35;
+
+var blockWidth = 25;
+
+var noteBlockWidth = 64;
+var noteBlockHeight = 64;
 
 var fadeOutHitTypeText = true;
 
@@ -77,7 +86,7 @@ let blurAmountOnVids = 5; // in pixels
 let blurAmountOnCovers = 10; // in pixels
 let blurAmountOnDefault = 10; // in pixels
 let brightnessAmount = 0.3;
-let maxBrightnessAmount = 0.8;
+let maxBrightnessAmount = 0.85;
 
 let pulseBGwithSound = true;
 let brightenBGwithTreble = true;
@@ -87,18 +96,21 @@ let exponentialCurveOnBG = true;
 let exponentialCurveOnShake = true;
 
 let bassThreshold = 0.55;
-let shakeMultiplier = 1.5;
+let shakeMultiplier = 1.6;
 
-let bassMultiplier = 2;
-let trebleMultiplier = 1;
+var shakeWithTreble = true;
 
-var BAR_COUNT = 32;
-var BAR_WIDTH = 14;
-var GAP = 6;
-var MAX_HEIGHT = 720 / 3;
-var visualizerOpacity = 0.04;
+let bassMultiplier = 2.2;
+let trebleMultiplier = 3;
+
+var barCount = 256; //32;
+var barWidth = 3; //14;
+var barGap = 0; //6;
+var barMaxHeight = 720 / 3;
+var visualizerOpacity = 0.1;
+var visualizerColor = "rgb(255, 255, 255)";
 var showVisualizer = true;
-var visualizerReactionWithSong = "shakeBass"; // "scaleBass", "scaleAvg", "scaleTreble", "shakeBass", "shakeTreble", "shakeAvg"
+var visualizerReactionWithSong = "shakeTreble"; // "scaleBass", "scaleAvg", "scaleTreble", "shakeBass", "shakeTreble", "shakeAvg"
 
 var accuracyBar = true;
 var accBarColors = ["red", "#ff7300", "#ffee00", "#00ff00", "#ffee00", "#ff7300", "red"];
@@ -115,15 +127,15 @@ var accBarOutlineCenterBlending = true;
 var accBarOutlineRotatingGradient = false;
 
 var outlineCopiesInsideBarCols = false;
-var accBarRoundCorner = 0;
+var accBarRoundCorner = 9;
 
 var accBarShadow = true;
 var accBarShadowCol = "black";
-var accBarShadowSize = 10;
+var accBarShadowSize = 12;
 
 var accBarHitLineShadow = true;
 var accBarHitLineShadowCol = "white";
-var accBarHitLineShadowSize = "15";
+var accBarHitLineShadowSize = "18";
 
 var accBarWidth = 315;
 var accBarHeight = 15;

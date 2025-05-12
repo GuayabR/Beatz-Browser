@@ -19,24 +19,10 @@ let NPS = 0;
 let punishment = "none";
 let songCharter = "";
 
-const noteTypes = [
-    "Upleft",
-    "Downleft",
-    "Left",
-    "Up",
-    "Down",
-    "Right",
-    "Upright",
-    "Downright"
-    //"SwipeUpleft",
-    //"SwipeUpright",
-    //"SwipeLeft",
-    //"SwipeUp",
-    //"SwipeDown",
-    //"SwipeRight",
-    //"SwipeDownright",
-    //"SwipeUpright"
-];
+var pointsAvailable = parseInt(localStorage.getItem("pointsAvailable")) || 0;
+var pointsGained = parseInt(localStorage.getItem("pointsGained")) || 0;
+
+const noteTypes = ["Upleft", "Downleft", "Left", "Up", "Down", "Right", "Upright", "Downright"];
 
 // Define fallback colors for each note type
 const noteColors = {
@@ -60,6 +46,7 @@ const exactRange = 4; // 3 Pixels on either side for an exact hit
 var targetYPosition = 500; // Y-position of stationary hit blocks
 
 let points = 0;
+let pointsRewarded = 0;
 let streak = 0;
 let misses = 0;
 let exactHits = 0;
@@ -68,6 +55,7 @@ let perfects = 0;
 let earlys = 0;
 let lates = 0;
 let notesHit = 0;
+let allTimeNotesHit = parseInt(localStorage.getItem("allTimeNotesHit")) || 0;
 let accuracy = 100;
 let noteProgress = 0;
 let recording = false; // To track if we're recording key presses
@@ -104,7 +92,7 @@ const ctx3 = canvas3.getContext("2d");
 
 const backCanvas = document.getElementById("canvas-1");
 
-const ctx01 = backCanvas.getContext("2d");
+const ctxBack = backCanvas.getContext("2d");
 
 // Enable high-quality rendering
 ctx.imageSmoothingEnabled = true;
@@ -219,16 +207,6 @@ function resetCanvasFromFullscreen() {
 
 // Update mappings for encoding and decoding note types with the new format
 const noteTypeMap = {
-    // Swipes
-    SwipeUpleft: "SUL",
-    SwipeDownleft: "SDL",
-    SwipeLeft: "SL",
-    SwipeUp: "SU",
-    SwipeDown: "SD",
-    SwipeRight: "SR",
-    SwipeDownright: "SDR",
-    SwipeUpright: "SUR",
-    // Normal
     Downleft: "DL",
     Upleft: "UL",
     Left: "L",
@@ -239,16 +217,6 @@ const noteTypeMap = {
     Downright: "DR"
 };
 const reverseNoteTypeMap = {
-    // Swipes
-    SUL: "SwipeUpleft",
-    SDL: "SwipeDownleft",
-    SL: "SwipeLeft",
-    SU: "SwipeUp",
-    SD: "SwipeDown",
-    SR: "SwipeRight",
-    SDR: "SwipeDownright",
-    SUR: "SwipeUpright",
-    // Normal
     DL: "Downleft",
     UL: "Upleft",
     L: "Left",
@@ -323,9 +291,6 @@ function newNoteSpacing(newSpacing) {
 
 function getNoteXPosition(noteType) {
     let baseType = noteType;
-    if (baseType.startsWith("Swipe")) {
-        baseType = baseType.replace("Swipe", "");
-    }
 
     return baseType;
 }
@@ -1112,6 +1077,7 @@ const offCtx = offscreenCanvas.getContext("2d");
 
 const blocksByNote = new Map();
 const orphanBlocks = [];
+const holdNoteSources = [];
 
 function drawNotes() {
     //if (!fullscreen) ctx.drawImage(images.background, 0, 0, WIDTH, HEIGHT);
@@ -1147,24 +1113,141 @@ function drawNotes() {
         const noteSpeedToUse = block.ownSpeed !== undefined ? block.ownSpeed : noteSpeed;
         const blockStartY = upscroll ? noteSpawnY - 1700 : -noteSpawnY;
         const yOffset = (upscroll ? -1 : 1) * noteSpeedToUse * (timeSinceSpawn / 6);
-        const blockY = blockStartY + yOffset;
+        const blockY = currentNoteStyleIndex == 9 ? blockStartY + yOffset + 20 : blockStartY + yOffset;
 
         const targetY = upscroll ? -HEIGHT : HEIGHT;
+        const pastTargetY = upscroll ? blockY <= targetYPosition : currentNoteStyleIndex == 9 ? blockY >= targetYPosition + 30 : blockY >= targetYPosition + 19;
         const outOfBounds = upscroll ? blockY <= targetY : blockY >= targetY;
 
-        if (outOfBounds) {
-            orphanBlocks.splice(i, 1); // remove from orphan list
-        } else {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-            ctx.fillRect(block.xPos, blockY - 37, block.width, block.height);
+        // Get all the keys for this block type
+        const keyBinding = Object.keys(keyBindings).filter((key) => keyBindings[key] === block.type);
+
+        // Check if any of the keybinds are pressed
+        const shouldDelete = outOfBounds || (pastTargetY && keyBinding.some((key) => keysPressed[key]));
+
+        if (shouldDelete) {
+            orphanBlocks.splice(i, 1);
+            continue;
+        }
+
+        if (!(pastTargetY && keyBinding.some((key) => keysPressed[key]))) {
+            // Get color and set opacity to 0.6
+            const color = noteColors[block.type] || "#FFFFFF"; // Fallback to white if not found
+
+            // If the color is in hex, convert to rgba with 0.6 opacity
+            let rgbaColor;
+            if (color.startsWith("#")) {
+                rgbaColor = hexToRGBA(color, 0.6); // Convert hex to RGBA
+            } else {
+                // If already in rgb, adjust the opacity
+                const rgb = hexToRgb(color); // Convert to RGB format
+                rgbaColor = `rgba(${rgb}, 0.6)`; // Set the opacity
+            }
+
+            ctx.fillStyle = rgbaColor;
+            ctx.fillRect(block.xPos, blockY, block.width, block.height);
         }
     }
 
-    // Move blocks of removed notes to orphanBlocks
+    for (let s = holdNoteSources.length - 1; s >= 0; s--) {
+        const note = holdNoteSources[s];
+        if (!note.spawnTime || typeof note.hold !== "number") continue;
+
+        const elapsed = now - note.spawnTime - 15;
+        var blockInterval = 40;
+        let blockHeight = 25;
+
+        if (currentNoteStyleIndex === 9) {
+            blockInterval = 10;
+            blockHeight = 10;
+        } else {
+            if (noteSpeed == 3) {
+                blockHeight = 20;
+            } else if (noteSpeed == 3.5) {
+                blockHeight = 23.6;
+            } else if (noteSpeed == 4) {
+                blockHeight = 27;
+            } else if (noteSpeed == 4.5) {
+                blockHeight = 30;
+            } else if (noteSpeed == 5) {
+                blockHeight = 33.6;
+            } else if (noteSpeed == 5.5) {
+                blockHeight = 37;
+            } else if (noteSpeed == 6) {
+                blockHeight = 40;
+            } else if (noteSpeed == 7) {
+                blockHeight = 46.9;
+            }
+        }
+
+        const blockCount = Math.floor(Math.min(elapsed, note.hold) / blockInterval);
+
+        if (!blocksByNote.has(note)) {
+            blocksByNote.set(note, []);
+        }
+
+        const blocks = blocksByNote.get(note);
+        const noteSpeedToUse = note.ownSpeed !== undefined ? note.ownSpeed : noteSpeed;
+
+        for (let i = blocks.length; i < blockCount; i++) {
+            const individualBlockSpawnTime = note.spawnTime + i * blockInterval;
+            const timeSinceSpawn = now - individualBlockSpawnTime;
+            const blockStartY = upscroll ? noteSpawnY - 1700 : -noteSpawnY;
+            const yOffset = (upscroll ? -1 : 1) * noteSpeedToUse * (timeSinceSpawn / 6);
+            const blockY = blockStartY + yOffset;
+
+            const passedTargetY = upscroll ? blockY <= targetYPosition : blockY >= targetYPosition;
+            if (passedTargetY && keysPressed[note.type]) {
+                continue; // Skip creating blocks after hitting target while held
+            }
+
+            if (!blocks[i]) {
+                blocks[i] = {
+                    xPos: note.x - blockWidth / 2,
+                    width: blockWidth,
+                    height: blockHeight,
+                    active: true,
+                    spawnTime: individualBlockSpawnTime,
+                    type: note.type
+                };
+            }
+
+            const block = blocks[i];
+            if (!block.active) continue;
+
+            const reachedTargetY = upscroll ? blockY <= targetYPosition : blockY >= targetYPosition;
+
+            if (reachedTargetY && keysPressed[note.type]) {
+                block.active = false; // Deactivate so it doesn't get duplicated
+                continue;
+            }
+
+            const isDuplicate = orphanBlocks.some((b) => b.spawnTime === block.spawnTime && b.xPos === block.xPos);
+            if (!isDuplicate && !keysPressed[note.type]) {
+                orphanBlocks.push({
+                    ...block,
+                    type: note.type,
+                    ownSpeed: noteSpeedToUse,
+                    spawnTime: individualBlockSpawnTime
+                });
+                block.active = false; // Mark as moved to orphan so it won't be pushed again
+            }
+        }
+
+        // Remove from source list if block spawning is done
+        if (elapsed >= note.hold) {
+            holdNoteSources.splice(s, 1);
+        }
+    }
+
+    // Move blocks of removed notes to orphanBlocks (only once)
     for (const [note, blocks] of blocksByNote.entries()) {
         if (!notes.includes(note)) {
             blocks.forEach((block) => {
-                orphanBlocks.push(block);
+                const alreadyExists = orphanBlocks.some((b) => b.spawnTime === block.spawnTime && b.xPos === block.xPos);
+                if (!alreadyExists) {
+                    orphanBlocks.push({ ...block });
+                }
             });
             blocksByNote.delete(note);
         }
@@ -1248,22 +1331,28 @@ function drawNotes() {
                 }
             }
         } else {
-            ctx.fillStyle = noteColors[type] || "white"; // Use the defined color or fallback to white
-            const sizeDifference = currentNoteSize - noteSize || 0;
-            const adjustedNoteYpos = targetYPosition + 31 - sizeDifference / 2;
-            const rectHeight = currentNoteSize - 64;
+            ctx.fillStyle = noteColors[type] || "white";
 
-            ctx.fillRect(x, adjustedNoteYpos, currentNoteSize, rectHeight);
+            // Calculate the center of the circle
+            const centerX = x + currentNoteSize / 2;
+            const centerY = targetYPosition + 30; // Adjust as needed for alignment
+            const radius = noteBlockHeight / 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
 
             if (whiteFlashes[type]) {
                 const elapsed = performance.now() - whiteFlashes[type].startTime;
-                const duration = 600; // ms
+                const duration = 300; // ms
                 if (elapsed >= duration) {
                     delete whiteFlashes[type];
                 } else {
                     const alpha = 1 - elapsed / duration;
                     ctx.fillStyle = `${whiteFlashes[type].color}${alpha})`;
-                    ctx.fillRect(x, adjustedNoteYpos, currentNoteSize, rectHeight);
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2); // Slightly larger radius for flash
+                    ctx.fill();
                 }
             }
         }
@@ -1274,57 +1363,8 @@ function drawNotes() {
         let noteType = note.type.startsWith("RecNote") ? note.type.replace("RecNote", "") : note.type;
 
         // Handle hold notes and draw blocks individually
-
-        // Handle hold notes and draw blocks individually
-        if (note.hold && typeof note.hold === "number" && note.spawnTime) {
-            const now = performance.now();
-            const elapsed = now - note.spawnTime;
-
-            const blockInterval = 100; // ms between blocks
-            const blockCount = Math.floor(Math.min(elapsed, note.hold) / blockInterval);
-
-            if (!blocksByNote.has(note)) {
-                blocksByNote.set(note, []);
-            }
-
-            const blocks = blocksByNote.get(note);
-
-            for (let i = 0; i < blockCount; i++) {
-                const individualBlockSpawnTime = note.spawnTime + i * blockInterval;
-                const timeSinceSpawn = now - individualBlockSpawnTime;
-
-                const noteSpeedToUse = note.ownSpeed !== undefined ? note.ownSpeed : noteSpeed;
-                const blockStartY = upscroll ? noteSpawnY - 1700 : -noteSpawnY;
-                const yOffset = (upscroll ? -1 : 1) * noteSpeedToUse * (timeSinceSpawn / 6);
-                const blockY = blockStartY + yOffset - 37;
-
-                // Initialize block if it doesn't exist yet
-                if (!blocks[i]) {
-                    blocks[i] = {
-                        xPos: note.x - 12.5,
-                        width: 25,
-                        height: 70,
-                        active: true,
-                        spawnTime: individualBlockSpawnTime
-                    };
-                }
-
-                // Check if the block should stop drawing if the key is held down
-                const targetY = upscroll ? -HEIGHT : HEIGHT;
-                const outOfBounds = upscroll ? blockY <= targetY : blockY >= targetY;
-
-                // Stop drawing blocks at targetYPosition if key is held
-                if (keysPressed[note.type] && !outOfBounds) {
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
-                    ctx.fillRect(blocks[i].xPos, blockY, blocks[i].width, blocks[i].height);
-                }
-
-                // If the key is released, blocks will continue drawing until they go out of bounds
-                if (!keysPressed[note.type] && !outOfBounds) {
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
-                    ctx.fillRect(blocks[i].xPos, blockY, blocks[i].width, blocks[i].height);
-                }
-            }
+        if (note.hold && typeof note.hold === "number" && note.spawnTime && !holdNoteSources.includes(note)) {
+            holdNoteSources.push(note);
         }
 
         // Special case for beatLine
@@ -1367,7 +1407,15 @@ function drawNotes() {
 
             ctx.globalAlpha = note.opacity; // Set faded opacity for fallback drawing
             ctx.fillStyle = noteColors[noteType] || "white"; // Use the defined color or fallback to white
-            ctx.fillRect(note.x - noteSize / 2, note.y + 31, noteSize, 10);
+
+            const centerX = note.x;
+            const centerY = note.y + 30; // Adjusted to match the previous Y offset
+            const radius = Math.min(noteBlockWidth, noteBlockHeight) / 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.filter = "none";
             ctx.globalAlpha = 1; // Reset alpha
         }
@@ -1475,6 +1523,51 @@ function drawNotes() {
 
     // Reset shadow properties after the text
     ctx2.shadowColor = "transparent"; // Reset shadow
+
+    if (pointsRewarded < calculatePoints(0)) {
+        // Normalize the value between 0 and 1
+        const t = Math.max(0, pointsRewarded / calculatePoints(0));
+
+        // Interpolate from dark red (128, 0, 0) → red (255, 0, 0) → orange (255, 128, 0)
+        // → yellow (255, 255, 0) → green (0, 255, 0)
+
+        let r, g, b;
+
+        if (t < 0.25) {
+            // dark red → red
+            const ratio = t / 0.25;
+            r = 128 + ratio * (255 - 128);
+            g = 0;
+            b = 0;
+        } else if (t < 0.5) {
+            // red → orange
+            const ratio = (t - 0.25) / 0.25;
+            r = 255;
+            g = ratio * 128;
+            b = 0;
+        } else if (t < 0.75) {
+            // orange → yellow
+            const ratio = (t - 0.5) / 0.25;
+            r = 255;
+            g = 128 + ratio * 127;
+            b = 0;
+        } else {
+            // yellow → green
+            const ratio = (t - 0.75) / 0.25;
+            r = 255 - ratio * 255;
+            g = 255;
+            b = 0;
+        }
+
+        ctx2.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${hitTypeOpacity})`;
+    } else {
+        // Always green for scores >= 50
+        ctx2.fillStyle = `rgba(0, 255, 0, ${hitTypeOpacity})`;
+    }
+
+    ctx2.textAlign = "center";
+    ctx2.font = `${fontSize - 16}px Poppins`;
+    ctx2.fillText(`${Math.floor(pointsRewarded)}`, WIDTH / 2, HEIGHT / 2 + 10);
 
     // Reset fill style after transparency effect
     ctx2.fillStyle = "white";
@@ -1624,32 +1717,6 @@ function toggleAutoHit() {
     console.log(`Auto-hit ${autoHitEnabled ? "enabled" : "disabled"}.`);
 }
 
-// Function to determine the swipe side
-function getSwipeSide(noteType) {
-    let cutSide = noteType.replace(/^Swipe/, ""); // Remove "Swipe" prefix
-
-    for (const side in swipeSideMap) {
-        if (swipeSideMap[side].includes(cutSide)) {
-            return side;
-        }
-    }
-    return null; // If not found
-}
-
-// Helper function to get the appropriate keybind for a swipe note
-function getKeybindForSwipe(noteType) {
-    const swipeSide = getSwipeSide(noteType);
-    if (!swipeSide) return null;
-
-    return swipeSide === "left" ? "KeyC" : "Comma"; // "C" for left swipes, "Comma" for right swipes
-}
-
-// Swipe side categorization
-const swipeSideMap = {
-    left: ["Upleft", "Downleft", "Left", "Up"],
-    right: ["Down", "Right", "Upright", "Downright"]
-};
-
 const keysPressed = {}; // Track which keys are currently held down
 
 function calculatePoints(distanceFromCenter) {
@@ -1662,12 +1729,13 @@ function calculatePoints(distanceFromCenter) {
         return basePoints;
     } else {
         // Early/Late → scaled points
-        const maxMissableDistance = targetYPositionEnd - targetYPositionStart;
-        const normalizedDistance = Math.min(distanceFromCenter - perfectRange, maxMissableDistance - perfectRange);
+        const maxMissableDistance = targetYPosition + 80 - (targetYPosition - 80);
+        const normalizedDistance = distanceFromCenter - perfectRange;
         const maxOffset = maxMissableDistance - perfectRange;
 
-        const scaledPoints = basePoints * 0.5 - (normalizedDistance / maxOffset) * basePoints * 0.4;
-        return Math.max(scaledPoints, basePoints * 0.1); // Minimum 10% points
+        // Scale the points based on distance from perfect hit
+        const scaledPoints = basePoints - (normalizedDistance / maxOffset) * (basePoints * 0.9);
+        return Math.max(scaledPoints, basePoints * 0.1); // Minimum 10% of base points
     }
 }
 
@@ -1694,6 +1762,7 @@ function registerHit(noteType) {
 
             if (noteY >= hitWindowTop && noteY <= hitWindowBottom) {
                 let earnedPoints = calculatePoints(distanceFromCenter);
+                pointsRewarded = 0;
 
                 const hitNote = notes[i]; // store before splice
 
@@ -1702,16 +1771,18 @@ function registerHit(noteType) {
                     const totalPoints = earnedPoints;
 
                     let chunks;
-                    if (hitNote.hold < 2000) {
+                    if (hitNote.hold < 1000) {
                         chunks = 24;
-                    } else if (hitNote.hold < 4000) {
-                        chunks = 48;
-                    } else if (hitNote.hold < 8000) {
+                    } else if (hitNote.hold < 2000) {
                         chunks = 64;
-                    } else if (hitNote.hold < 12000) {
+                    } else if (hitNote.hold < 4000) {
                         chunks = 128;
-                    } else {
+                    } else if (hitNote.hold < 8000) {
                         chunks = 256;
+                    } else if (hitNote.hold < 12000) {
+                        chunks = 512;
+                    } else {
+                        chunks = 1024;
                     }
 
                     const interval = hitNote.hold / chunks;
@@ -1731,6 +1802,18 @@ function registerHit(noteType) {
                             if (keysPressed[holdKey] && currentChunk < chunks) {
                                 const chunkPoints = totalPoints / chunks;
                                 points += chunkPoints;
+
+                                if (!autoHitEnabled) {
+                                    pointsGained += chunkPoints;
+                                    pointsAvailable += chunkPoints;
+                                    localStorage.setItem("pointsGained", pointsGained);
+                                    localStorage.setItem("pointsAvailable", pointsAvailable);
+                                }
+
+                                pointsRewarded += chunkPoints;
+
+                                showHitType();
+
                                 //console.log(`Chunk ${currentChunk + 1}/${chunks}: +${chunkPoints.toFixed(2)} points`);
                                 currentChunk++;
                             } else {
@@ -1788,6 +1871,7 @@ function registerHit(noteType) {
                             misses++;
                             streak = 0;
                             points -= earnedPoints; // Subtract missed points
+                            pointsRewarded = earnedPoints;
                             earnedPoints = 0;
                             notes.splice(i, 1);
                             updateAccuracy();
@@ -1863,6 +1947,10 @@ function registerHit(noteType) {
                 }
 
                 notesHit++;
+                if (!autoHitEnabled) {
+                    allTimeNotesHit++;
+                    localStorage.setItem("allTimeNotesHit", allTimeNotesHit);
+                }
 
                 showHitType(hitType);
                 lastHitDistance = noteY - targetYPosition;
@@ -1878,6 +1966,16 @@ function registerHit(noteType) {
                 let finalPoints = punishment === "harsh" && hitTypeID === 5 ? 0 : earnedPoints;
                 if (!hitNote.hold) {
                     points += finalPoints;
+
+                    if (!autoHitEnabled) {
+                        pointsGained += finalPoints;
+                        pointsAvailable += finalPoints;
+                        localStorage.setItem("pointsGained", pointsGained);
+                        localStorage.setItem("pointsAvailable", pointsAvailable);
+                    }
+
+                    pointsRewarded = finalPoints;
+
                     console.log(`Earned: ${finalPoints.toFixed(2)} | (${hitType} at ${savedtimestamp})`);
                 } else {
                     // Still log the hit (just don't award all points at once)
@@ -1898,31 +1996,32 @@ function registerHit(noteType) {
                 }
 
                 if (!pulseNotesOnClick && pulseNotesOnHit) {
-                    const sizeIncrease = currentNoteStyleIndex === 9 || currentStaticStyleIndex === 9 ? 5 : 10;
+                    const sizeDelta = (currentNoteStyleIndex === 9 || currentStaticStyleIndex === 9 ? 5 : 10) * (pulseNotesOutwards ? 1 : -1);
+
                     switch (noteType) {
                         case "Upleft":
-                            upLeftNoteSize += sizeIncrease;
+                            upLeftNoteSize += sizeDelta;
                             break;
                         case "Downleft":
-                            downLeftNoteSize += sizeIncrease;
+                            downLeftNoteSize += sizeDelta;
                             break;
                         case "Left":
-                            leftNoteSize += sizeIncrease;
+                            leftNoteSize += sizeDelta;
                             break;
                         case "Up":
-                            upNoteSize += sizeIncrease;
+                            upNoteSize += sizeDelta;
                             break;
                         case "Down":
-                            downNoteSize += sizeIncrease;
+                            downNoteSize += sizeDelta;
                             break;
                         case "Right":
-                            rightNoteSize += sizeIncrease;
+                            rightNoteSize += sizeDelta;
                             break;
                         case "Downright":
-                            downRightNoteSize += sizeIncrease;
+                            downRightNoteSize += sizeDelta;
                             break;
                         case "Upright":
-                            upRightNoteSize += sizeIncrease;
+                            upRightNoteSize += sizeDelta;
                             break;
                         default:
                             console.log("No note type found");
@@ -2012,38 +2111,25 @@ document.addEventListener("keydown", (event) => {
         if (doubleInputPrevention) {
             const now = performance.now();
             const lastPressed = lastKeyPressTimestamps[noteType] || 0;
-            if (now - lastPressed >= DOUBLE_PRESS_INTERVAL) {
+            if (now - lastPressed >= doubleClickTime) {
                 lastKeyPressTimestamps[noteType] = now;
-                pressNote(noteType, key);
+                pressNote(noteType);
             } else {
-                // Optionally log or ignore silently
                 console.log(`Double input prevented for ${noteType}`);
             }
         } else {
-            pressNote(noteType, key);
+            pressNote(noteType);
         }
     }
 });
 
 let lastKeyPressTimestamps = {};
-const DOUBLE_PRESS_INTERVAL = 35; // in milliseconds
 
 const pressDurations = {}; // To store press durations
-const holdThreshold = 150; // Threshold in milliseconds for a hold note
+const holdThreshold = 175; // Threshold in milliseconds for a hold note
 
-function pressNote(noteType, key) {
-    // Check if the note is a swipe note and enforce swipe keybinds
-    if (noteType.startsWith("Swipe")) {
-        const expectedKeybind = getKeybindForSwipe(noteType);
-        console.warn(`Key for ${noteType}. Expected: ${expectedKeybind}, but got: ${key}`);
-
-        if (expectedKeybind !== key) {
-            console.error(`Incorrect key for ${noteType}. Expected: ${expectedKeybind}, but got: ${key}`);
-            return; // Prevent hitting the note with the wrong keybind
-        }
-    }
-
-    if (recording && ["Left", "Up", "Down", "Right", "Upleft", "Downleft", "Upright", "Downright", "Leftswipe", "Rightswipe"].includes(noteType)) {
+function pressNote(noteType) {
+    if (recording && ["Left", "Up", "Down", "Right", "Upleft", "Downleft", "Upright", "Downright"].includes(noteType)) {
         const timestamp = Date.now() - starttime;
 
         // Record the note as a regular note
@@ -2074,33 +2160,33 @@ function pressNote(noteType, key) {
 
     highlightedNotes[noteType] = true;
 
-    const sizeIncrease = currentNoteStyleIndex === 9 || currentStaticStyleIndex === 9 ? 5 : 10;
-
     if (pulseNotesOnClick) {
+        const sizeDelta = (currentNoteStyleIndex === 9 || currentStaticStyleIndex === 9 ? 5 : 10) * (pulseNotesOutwards ? 1 : -1);
+
         switch (noteType) {
             case "Upleft":
-                upLeftNoteSize += sizeIncrease;
+                upLeftNoteSize += sizeDelta;
                 break;
             case "Downleft":
-                downLeftNoteSize += sizeIncrease;
+                downLeftNoteSize += sizeDelta;
                 break;
             case "Left":
-                leftNoteSize += sizeIncrease;
+                leftNoteSize += sizeDelta;
                 break;
             case "Up":
-                upNoteSize += sizeIncrease;
+                upNoteSize += sizeDelta;
                 break;
             case "Down":
-                downNoteSize += sizeIncrease;
+                downNoteSize += sizeDelta;
                 break;
             case "Right":
-                rightNoteSize += sizeIncrease;
+                rightNoteSize += sizeDelta;
                 break;
             case "Downright":
-                downRightNoteSize += sizeIncrease;
+                downRightNoteSize += sizeDelta;
                 break;
             case "Upright":
-                upRightNoteSize += sizeIncrease;
+                upRightNoteSize += sizeDelta;
                 break;
             default:
                 console.log("No note type found");
@@ -2229,6 +2315,25 @@ let hitLineImg = new Image();
 
 hitLineImg.src = "Resources/Arrows/hitLine.png";
 
+function rgbaToHex(rgba) {
+    const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*\.?\d+))?\)/);
+    if (!match) return null;
+
+    let [, r, g, b, a] = match.map((x, i) => (i === 0 ? x : parseFloat(x)));
+    r = Math.round(r).toString(16).padStart(2, "0");
+    g = Math.round(g).toString(16).padStart(2, "0");
+    b = Math.round(b).toString(16).padStart(2, "0");
+
+    if (a !== undefined && !isNaN(a)) {
+        a = Math.round(a * 255)
+            .toString(16)
+            .padStart(2, "0");
+        return `#${r}${g}${b}${a}`;
+    }
+
+    return `#${r}${g}${b}`;
+}
+
 function hexToRGBA(hex, alpha) {
     const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
     hex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
@@ -2262,7 +2367,6 @@ function drawAccuracyBar(distanceFromCenter, deltaTime) {
     const barX = WIDTH / 2 - accBarWidth / 2;
     const barY = upscroll ? 60 : 600;
 
-    // Remove expired hits
     const now = performance.now();
 
     // Handle Outline Gradient Rotation (if enabled)
@@ -2880,8 +2984,6 @@ function simulateKeyPress(note) {
     const noteType = note.type;
     const keyCode = Object.keys(keyBindings).find((code) => keyBindings[code] === noteType);
 
-    let randomHold = Math.random() * (125 - 50) + 50;
-
     if (keyCode) {
         // Trigger keydown event with correct event.code
         document.dispatchEvent(new KeyboardEvent("keydown", { code: keyCode }));
@@ -2896,7 +2998,7 @@ function simulateKeyPress(note) {
             // If it's not a hold note, just trigger the keyup event after a short random delay
             setTimeout(() => {
                 document.dispatchEvent(new KeyboardEvent("keyup", { code: keyCode }));
-            }, randomHold);
+            }, 25);
         }
     } else {
         console.warn(`No keybinding found for noteType: ${noteType}`);
@@ -2983,8 +3085,8 @@ function startGame(rec = false, customSong = false) {
     video.style.height = "100%";
     video.style.objectFit = "cover";
     video.style.zIndex = "0";
-    video.style.filter = `brightness(${brightnessAmount})`;
-    video.style.transition = "opacity 1s ease-in-out, filter 1s ease-in-out"; // Added transition for brightness
+    video.style.filter = `brightness(${brightnessAmount / maxBrightnessAmount})`;
+    video.style.transition = "opacity 3s ease-in-out, filter 1.5s ease-in-out"; // Added transition for brightness
 
     // Handle custom song logic
     if (customSong) {
@@ -3200,146 +3302,154 @@ function startGame(rec = false, customSong = false) {
         document.getElementById("startButton").style.display = "none";
     }
 
-    // If video loads successfully, replace the background
-    video.addEventListener("canplaythrough", () => {
-        if (gameStarted) return;
-        console.log(`Background video found: ${videoPath}`);
+    video.addEventListener("loadedmetadata", () => {
+        // If video loads successfully, replace the background
+        video.addEventListener("canplaythrough", () => {
+            if (gameStarted) return;
+            console.log(`Background video found: ${videoPath}`);
 
-        // Append video and try to load
-        backgroundOverlay.innerHTML = "";
-        backgroundOverlay.appendChild(video);
+            // Append video and try to load
+            backgroundOverlay.innerHTML = "";
+            backgroundOverlay.appendChild(video);
 
-        requestAnimationFrame(() => {
-            video.style.transition = "opacity 0.3s ease";
-            video.style.opacity = "1";
-        });
+            requestAnimationFrame(() => {
+                video.style.transition = "opacity 0.3s ease";
+                video.style.opacity = "1";
+            });
 
-        if (blurCanvasOnVids) canvas.style.backdropFilter = `blur(${blurAmountOnVids}px)`;
-        else canvas.style.backdropFilter = "none";
+            if (blurCanvasOnVids) canvas.style.backdropFilter = `blur(${blurAmountOnVids}px)`;
+            else canvas.style.backdropFilter = "none";
 
-        if (isMagnolia) {
-            video.muted = false;
-            video.style.filter = "brightness(1)";
-            video.play();
-
-            // Wait 4 seconds before fading out video and starting song
-            setTimeout(() => {
-                // Fade out video
-
-                // Start playing the song and fade it in
-                currentSong.volume = 0;
-                currentSong.play();
-
-                setTimeout(() => {
-                    video.muted = true;
-                    currentSong.volume = 1;
-
-                    setTimeout(() => {
-                        video.style.filter = `brightness(${brightnessAmount})`;
-                    }, 1500);
-                }, 650);
-            }, 5200);
-
-            if (video.HAVE_METADATA && !gameStarted) {
-                playGame(false);
-            }
-        } else if (isFEIN) {
-            video.muted = false;
-            video.style.filter = "brightness(1)";
-            video.play();
-            video.volume = 1;
-
-            // Wait 4 seconds before fading out video and starting song
-            setTimeout(() => {
-                // Fade out video
-
-                // Start playing the song and fade it in
-                currentSong.play();
-                video.muted = true;
-                video.style.filter = `brightness(${brightnessAmount})`;
-            }, 7200);
-
-            if (!gameStarted) {
-                playGame(false); // Start game logic immediately (note generation, etc.)
-            }
-        } else if (isKOCMOC) {
-            video.loop = true;
-            video.play();
-
-            // Prevent duplicate note generation if already started
-            if (!gameStarted) {
-                playGame();
-            }
-        } else if (currentSong.src.includes("Powersound.mp3")) {
-            video.loop = true;
-            video.play();
-
-            // Powersound special timed fade and restart using timeout
-            setTimeout(() => {
-                // Create black overlay
-                const blackOverlay = document.createElement("div");
-                blackOverlay.id = "blackOverlay";
-                blackOverlay.style.position = "absolute";
-                blackOverlay.style.top = "0";
-                blackOverlay.style.left = "0";
-                blackOverlay.style.width = "100%";
-                blackOverlay.style.height = "100%";
-                blackOverlay.style.backgroundColor = "black";
-                blackOverlay.style.opacity = "0";
-                blackOverlay.style.transition = "opacity 1s ease-in-out";
-                blackOverlay.style.zIndex = "1"; // Above video
-
-                backgroundOverlay.appendChild(blackOverlay);
-
-                // Fade in black
-                requestAnimationFrame(() => {
-                    blackOverlay.style.opacity = "1";
+            if (isMagnolia) {
+                video.muted = false;
+                video.style.filter = "brightness(1)";
+                video.play().then(() => {
+                    requestAnimationFrame(() => {
+                        if (!gameStarted) {
+                            playGame(false);
+                        }
+                    });
                 });
 
-                // After black fade-in, reset video
+                // Wait 4 seconds before fading out video and starting song
                 setTimeout(() => {
-                    video.style.opacity = "0";
+                    // Fade out video
+
+                    // Start playing the song and fade it in
+                    currentSong.volume = 0;
+                    currentSong.play();
 
                     setTimeout(() => {
-                        video.currentTime = 0;
-                        video.play();
-                        video.style.opacity = "1";
+                        video.muted = true;
+                        currentSong.volume = 1;
 
-                        // Fade out black overlay
-                        blackOverlay.style.opacity = "0";
-
-                        // Clean up black overlay
                         setTimeout(() => {
-                            if (blackOverlay.parentElement) {
-                                blackOverlay.parentElement.removeChild(blackOverlay);
-                            }
-                        }, 1000);
-                    }, 1000);
-                }, 1000);
-            }, 227000); // 230.3 seconds = 230300 ms
+                            video.style.filter = `brightness(${brightnessAmount})`;
+                        }, 1500);
+                    }, 650);
+                }, 5200);
+            } else if (isFEIN) {
+                video.muted = false;
+                video.style.filter = "brightness(1)";
+                video.play().then(() => {
+                    requestAnimationFrame(() => {
+                        if (!gameStarted) {
+                            playGame(false);
+                        }
+                    });
+                });
+                video.volume = 1;
 
-            // Prevent duplicate note generation if already started
-            if (!gameStarted) {
-                playGame();
-            }
-        } else {
-            if (epTimestamp !== undefined) {
-                video.currentTime = epTimestamp;
-            }
+                // Wait 4 seconds before fading out video and starting song
+                setTimeout(() => {
+                    // Fade out video
 
-            video.play().then(() => {
-                requestAnimationFrame(() => {
-                    video.style.transition = "opacity 0.3s ease";
-                    video.style.opacity = "1";
-
-                    setTimeout(() => {
+                    // Start playing the song and fade it in
+                    currentSong.play();
+                    video.muted = true;
+                    video.style.filter = `brightness(${brightnessAmount})`;
+                }, 7200);
+            } else if (isKOCMOC) {
+                video.loop = true;
+                video.play().then(() => {
+                    requestAnimationFrame(() => {
                         if (!gameStarted) {
                             playGame();
                         }
-                    }, 300); // Wait for opacity transition (0.3s)
+                    });
                 });
-            });
-        }
+            } else if (currentSong.src.includes("Powersound.mp3")) {
+                video.loop = true;
+                video.play();
+
+                // Powersound special timed fade and restart using timeout
+                setTimeout(() => {
+                    // Create black overlay
+                    const blackOverlay = document.createElement("div");
+                    blackOverlay.id = "blackOverlay";
+                    blackOverlay.style.position = "absolute";
+                    blackOverlay.style.top = "0";
+                    blackOverlay.style.left = "0";
+                    blackOverlay.style.width = "100%";
+                    blackOverlay.style.height = "100%";
+                    blackOverlay.style.backgroundColor = "black";
+                    blackOverlay.style.opacity = "0";
+                    blackOverlay.style.transition = "opacity 1s ease-in-out";
+                    blackOverlay.style.zIndex = "1"; // Above video
+
+                    backgroundOverlay.appendChild(blackOverlay);
+
+                    // Fade in black
+                    requestAnimationFrame(() => {
+                        blackOverlay.style.opacity = "1";
+                    });
+
+                    // After black fade-in, reset video
+                    setTimeout(() => {
+                        video.style.opacity = "0";
+
+                        setTimeout(() => {
+                            video.currentTime = 0;
+                            video.play().then(() => {
+                                requestAnimationFrame(() => {
+                                    if (!gameStarted) {
+                                        playGame();
+                                    }
+                                });
+                            });
+                            video.style.opacity = "1";
+
+                            // Fade out black overlay
+                            blackOverlay.style.opacity = "0";
+
+                            // Clean up black overlay
+                            setTimeout(() => {
+                                if (blackOverlay.parentElement) {
+                                    blackOverlay.parentElement.removeChild(blackOverlay);
+                                }
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }, 227000); // 230.3 seconds = 230300 ms
+
+                // Prevent duplicate note generation if already started
+            } else {
+                if (epTimestamp !== undefined) {
+                    video.currentTime = epTimestamp;
+                }
+
+                video.play().then(() => {
+                    requestAnimationFrame(() => {
+                        video.style.transition = "opacity 0.3s ease";
+                        video.style.opacity = "1";
+
+                        if (!gameStarted) {
+                            playGame();
+                        }
+                    });
+                });
+            }
+        });
     });
 
     video.addEventListener("error", () => {
@@ -3380,7 +3490,7 @@ function startGame(rec = false, customSong = false) {
     let videoFaded = false; // Prevent multiple fade triggers
 
     video.addEventListener("timeupdate", () => {
-        if (!videoFaded && video.duration - video.currentTime <= 1) {
+        if (!videoFaded && video.duration - video.currentTime <= 3) {
             videoFaded = true;
 
             if (video.loop) {
@@ -3426,7 +3536,7 @@ function startGame(rec = false, customSong = false) {
 
                     if (blurCanvasOnDefault) canvas.style.backdropFilter = `blur(${blurAmountOnDefault}px)`;
                     else canvas.style.backdropFilter = "none";
-                }, 1000);
+                }, 3000);
             }
         }
     });
@@ -3501,6 +3611,8 @@ function newBpmPulseInterval(newBpm, fontSizeIncrease = 0, smallFSincrease = 0, 
     console.log("Applied new BPM pulse with increases:", fontSizeIncrease, smallFSincrease, bmpPulseFSincrease);
 }
 
+var progressBarCol = "rgb(255, 255, 255)";
+
 function animateBackgroundToVolume() {
     if (!analyserRight || !analyserLeft || isFileProtocol) return;
     const dataArray = dataArrayLeft.map((val, i) => (val + dataArrayRight[i]) / 2);
@@ -3552,6 +3664,19 @@ function animateBackgroundToVolume() {
 
     let boostedShakeStrength = normalizedBass * shakeMultiplier;
     if (exponentialCurveOnShake) {
+        if (shakeWithTreble) {
+            if (normalizedTreble > 0.9) {
+                boostedShakeStrength *= 3.2;
+            } else if (normalizedTreble > 0.85) {
+                boostedShakeStrength *= 2.8;
+            } else if (normalizedTreble > 0.81) {
+                boostedShakeStrength *= 2;
+            } else if (normalizedTreble > 0.75) {
+                boostedShakeStrength *= 1.3;
+            } else if (normalizedTreble > 0.65) {
+                boostedShakeStrength *= 1.1;
+            }
+        }
         if (normalizedBass > 0.9) {
             boostedShakeStrength *= 3;
         } else if (normalizedBass > 0.85) {
@@ -3564,6 +3689,14 @@ function animateBackgroundToVolume() {
             boostedShakeStrength *= 0.5;
         } else if (normalizedBass > 0.4) {
             boostedShakeStrength *= 0.2;
+        }
+
+        if (normalizedLowBass > 0.9) {
+            boostedShakeStrength *= 1.5;
+        } else if (normalizedLowBass > 0.85) {
+            boostedShakeStrength *= 1.2;
+        } else if (normalizedLowBass > 0.81) {
+            boostedShakeStrength *= 1.05;
         }
     }
 
@@ -3593,28 +3726,28 @@ function animateBackgroundToVolume() {
     }
 
     if (shakeScreenWithBass && normalizedBass > bassThreshold) {
-        shakeScreen(boostedShakeStrength, 16, 75, 0);
+        shakeScreen(boostedShakeStrength, 16, 40, 0);
     }
 
     if (visualizerReactionWithSong === "shakeBass" && normalizedBass > bassThreshold) {
-        shakeScreen(boostedShakeStrength, 16, 75, 0, true, backCanvas);
+        shakeScreen(boostedShakeStrength - 0.25, 16, 75, 0, true, backCanvas);
     } else if (visualizerReactionWithSong === "shakeAvg" && normalizedOverall > bassThreshold) {
-        shakeScreen(normalizedOverall * shakeMultiplier, 16, 75, 0, true, backCanvas);
+        shakeScreen(boostedShakeStrength * shakeMultiplier, 16, 75, 0, true, backCanvas);
     } else if (visualizerReactionWithSong === "shakeTreble" && normalizedTreble > bassThreshold) {
-        shakeScreen(normalizedTreble * shakeMultiplier, 16, 75, 0, true, backCanvas);
+        shakeScreen(boostedShakeStrength * shakeMultiplier + 0.2, 16, 75, 0, true, backCanvas);
     }
 
-    const chunkSize = Math.floor(dataArrayLeft.length / BAR_COUNT);
+    const chunkSize = Math.floor(dataArrayLeft.length / barCount);
     const middleX = canvas2.width / 2;
 
     if (!gamePaused) {
-        for (let i = 0; i < BAR_COUNT; i++) {
+        for (let i = 0; i < barCount; i++) {
             const start = i * chunkSize;
             const end = start + chunkSize;
 
             // Mirror from center: low (middle), high (outside)
-            const isLeftSide = i < BAR_COUNT / 2;
-            const mirrorIndex = isLeftSide ? BAR_COUNT / 2 - 1 - i : i - BAR_COUNT / 2;
+            const isLeftSide = i < barCount / 2;
+            const mirrorIndex = isLeftSide ? barCount / 2 - 1 - i : i - barCount / 2;
 
             const chunkL = dataArrayLeft.slice(mirrorIndex * chunkSize, (mirrorIndex + 1) * chunkSize);
             const chunkR = dataArrayRight.slice(mirrorIndex * chunkSize, (mirrorIndex + 1) * chunkSize);
@@ -3622,26 +3755,61 @@ function animateBackgroundToVolume() {
             const avgL = chunkL.reduce((a, b) => a + b, 0) / chunkL.length;
             const avgR = chunkR.reduce((a, b) => a + b, 0) / chunkR.length;
 
-            const heightL = (avgL / 255) * MAX_HEIGHT;
-            const heightR = (avgR / 255) * MAX_HEIGHT;
+            const intensityL = avgL / 255;
+            const intensityR = avgR / 255;
 
-            ctx01.fillStyle = "#FFFFFF"; // Color for both bars
-            ctx01.globalAlpha = visualizerOpacity;
+            // Apply non-linear scaling
+            const scaledL = Math.pow(intensityL, 2.21); // try 1.5–2.0 for smoother results
+            const scaledR = Math.pow(intensityR, 2.21);
+
+            const heightL = scaledL * barMaxHeight;
+            const heightR = scaledR * barMaxHeight;
+
+            ctxBack.fillStyle = rgbaToHex(visualizerColor); // Color for both bars
+            ctxBack.globalAlpha = visualizerOpacity;
 
             // Draw left bar (mirror from center)
-            const leftX = middleX - GAP / 2 - (BAR_WIDTH + GAP) * i - 7; //- 180;
-            ctx01.fillRect(leftX, canvas2.height - heightL, BAR_WIDTH, heightL);
+            const leftX = middleX - barGap / 2 - (barWidth + barGap) * i - barWidth; //- 180;
+            ctxBack.fillRect(leftX, canvas2.height - heightL, barWidth, heightL);
 
             // Draw right bar (mirror from center)
-            const rightX = middleX + GAP / 2 + (BAR_WIDTH + GAP) * i + 7; //+ 180;
-            ctx01.fillRect(rightX, canvas2.height - heightR, BAR_WIDTH, heightR);
+            const rightX = middleX + barGap / 2 + (barWidth + barGap) * i; // + 7; //+ 180;
+            ctxBack.fillRect(rightX, canvas2.height - heightR, barWidth, heightR);
 
-            ctx01.globalAlpha = "1";
+            ctxBack.globalAlpha = "1";
         }
     }
 
+    // Update progressBarCol based on frequency ranges
+    const bassColor = [0, 0, 255]; // blue
+    const avgColor = [255, 2, 127]; // pink
+
+    // Interpolation function
+    const lerpColor = (color1, color2, factor) => {
+        return color1.map((c, i) => Math.floor(c + (color2[i] - c) * Math.min(1, factor)));
+    };
+
+    bassBlend = lerpColor(bassColor, avgColor, normalizedBass); // red → pink
+    trebleBlend = lerpColor(avgColor, bassColor, normalizedOverall); // pink → magenta
+
+    // Weighted blend based on normalized energy levels
+    const totalWeight = normalizedLowBass + normalizedBass + normalizedTreble + normalizedOverall;
+    const weights = [normalizedLowBass / totalWeight, normalizedBass / totalWeight, normalizedTreble / totalWeight, normalizedOverall / totalWeight];
+
+    const finalRGB = [0, 0, 0];
+    [bassBlend, trebleBlend].forEach((color, i) => {
+        finalRGB[0] += color[0] * weights[i];
+        finalRGB[1] += color[1] * weights[i];
+        finalRGB[2] += color[2] * weights[i];
+    });
+
+    progressBarCol = `rgb(${Math.floor(finalRGB[0])}, ${Math.floor(finalRGB[1])}, ${Math.floor(finalRGB[2])})`;
+
     volumePulseLoop = requestAnimationFrame(animateBackgroundToVolume);
 }
+
+let bassBlend;
+let trebleBlend;
 
 var screenShaking = false;
 
@@ -4025,6 +4193,11 @@ function drawEndScreen() {
     ctx.fillText("Maximum streak: " + maxStreak, WIDTH / 2, HEIGHT / 2 + 200);
 }
 
+function loseGame(delta) {
+    noteSpeed -= 0.25;
+    currentSong.pause();
+}
+
 let ignoreMouse = false;
 
 leftPressed = upPressed = downPressed = rightPressed = false;
@@ -4277,7 +4450,7 @@ let globalDelta;
 
 // Game loop
 function gameLoop(currentTime) {
-    ctx01.clearRect(0, 0, backCanvas.width, backCanvas.height);
+    ctxBack.clearRect(0, 0, backCanvas.width, backCanvas.height);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
     ctx3.clearRect(0, 0, canvas3.width, canvas3.height);
@@ -4316,11 +4489,12 @@ function gameLoop(currentTime) {
     ctx.fillStyle = "white";
     ctx.font = "15px Poppins";
 
-    ctx.fillText(`NPS: ${NPS}`, 10, HEIGHT - 70);
-    ctx.fillText(`Total notes: ${totalNotes}`, 10, HEIGHT - 50);
+    ctx.fillText(`NPS: ${NPS}`, 10, HEIGHT - 90);
+    ctx.fillText(`Total notes: ${totalNotes}`, 10, HEIGHT - 70);
+    ctx.fillText(`Points Gained/Available: ${pointsGained.toFixed(0)} | ${pointsAvailable.toFixed(0)}`, 10, HEIGHT - 50);
 
     filteredNotes.forEach((note, index) => {
-        if (index < 18) {
+        if (index < 17) {
             ctx.fillText(`Note ${index + 1}:`, 10, HEIGHT / 2 - 70 + index * 20);
             ctx.fillText(`${note.type}`, 70, HEIGHT / 2 - 70 + index * 20);
 
@@ -4332,12 +4506,12 @@ function gameLoop(currentTime) {
             }
 
             ctx.fillText(`Y = ${note.y.toFixed(3)}`, yTextXPos, HEIGHT / 2 - 70 + index * 20);
-        } else if (index === 18) {
+        } else if (index === 17) {
             ctx.fillText(`... (${filteredNotes.length - 18})`, recording ? 270 : 210, HEIGHT / 2 - 70 + (index - 1) * 20); // Add triple dots if more than 19
         }
     });
 
-    ctx.fillText(`Notes hit: ${notesHit}`, 10, HEIGHT - 30);
+    ctx.fillText(`Notes hit: ${notesHit} | All time: ${allTimeNotesHit}`, 10, HEIGHT - 30);
     ctx.fillText(`Visible notes: ${filteredNotes.length}`, 10, HEIGHT - 10);
 
     // Font size pulsing logic with deltaTime scaling
@@ -4376,11 +4550,11 @@ function gameLoop(currentTime) {
         const adjustNoteSize = (size) => {
             // If the note size is over 75, reset to 74
             if (size > maxNoteSize) {
-                return 90;
+                return maxNoteSize - 1;
             }
             // If the note size is under 60, reset to 61
-            if (size < 55) {
-                return 56;
+            if (size < minNoteSize) {
+                return minNoteSize + 1;
             }
             // Adjust size: decrease if over 68, increase if under 68
             if (size > 72) {
@@ -4431,7 +4605,14 @@ function gameLoop(currentTime) {
     const duration = currentSong.duration || 1;
     const progressWidth = (WIDTH * currentSongTime) / duration;
 
-    ctx.fillStyle = "red";
+    if (isFileProtocol) {
+        ctx.fillStyle = "red"
+    } else {
+    const gradient = ctx.createLinearGradient(0, 0, progressWidth, 0);
+    gradient.addColorStop(0, `rgb(${bassBlend[0]}, ${bassBlend[1]}, ${bassBlend[2]})`);
+    gradient.addColorStop(1, `rgb(${trebleBlend[0]}, ${trebleBlend[1]}, ${trebleBlend[2]})`);
+    ctx.fillStyle = gradient;
+    }
 
     if (!recording && !upscroll) {
         ctx.fillRect(0, 0, progressWidth, 5);
