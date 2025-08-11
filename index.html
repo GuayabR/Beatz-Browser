@@ -17,23 +17,16 @@
         </div>
 
         <button id="startButton" onclick="startGame()">Play! <i class="fa-solid fa-play"></i></button>
-        <button id="myYoutube" title="My YouTube! (@GuayabR)" style="display: none" onclick="NewTab()"><i class="fa-brands fa-youtube"></i></button>
-        <button id="githubRepo" title="GitHub Repository for Beatz! Where you can download the game for offline use!" style="display: none">
-            <i class="fa-brands fa-github"></i>
-        </button>
-        <button id="toggleNoteStyleButton" title="Toggle Note Style (Arrows / Circles)" onclick="changeNoteStyle()" style="display: none">
-            <i class="fa-solid fa-arrow-up" style="display: none"></i>
-            <i class="fa-solid fa-circle" style="display: none"></i>
-        </button>
-        <button id="previousButton" title="Previous Song" style="display: none"><i class="fa-solid fa-backward-fast"></i></button>
-        <button id="restartButton" onclick="resetGame()" title="Restart Song" style="display: none"><i class="fa-solid fa-repeat"></i></button>
-        <button id="nextButton" title="Next Song" style="display: none"><i class="fa-solid fa-forward-fast"></i></button>
-        <button id="randomizeButton" title="Randomize Song" onclick="randomizeChart()" style="display: none"><i class="fa-solid fa-shuffle"></i></button>
+
         <button id="toggleAutoHit" onclick="toggleAutoHit()" style="display: none">Toggle Auto Hit</button>
+
         <button id="fullscreen" title="Toggle Fullscreen" style="display: none" onclick="toggleFullscreen()"><i class="fa-solid fa-expand"></i></button>
+
         <button id="settingsButton" title="Game Settings" style="display: none"><i class="fa-solid fa-gear"></i></button><br /><br />
+
         <button id="recordButton" onclick="startRecording()">Start Recording</button>
         <button id="stopRecordingButton" onclick="stopRecording()" style="display: none">Stop Recording</button>
+        
         <button id="toggleAutoHit" onclick="toggleAutoHit()">Toggle Auto Hit</button>
 
         <input type="file" id="fileInput" accept=".beatz" style="display: none" />
@@ -41,12 +34,10 @@
 
         <button id="encodeButton">Export Notes</button>
         <br /><br />
-        <button id="changeNote" onclick="changeNoteStyle()">Change All Note Style</button>
-        <button id="changeFallingNote" onclick="changeFallingNoteStyle()">Change Falling Note Style</button>
-        <button id="changePressedNote" onclick="changePressStyle()">Change Pressed Note Style</button>
-        <button id="changeRecordingNote" onclick="changeRecStyle()">Change Recording Note Style</button>
-        <button id="changeStaticNote" onclick="changeStaticStyle()">Change Static Note Style</button>
-        <audio id="song" src="Resources/Songs/NADA DE NADA.mp3" preload="auto"></audio>
+
+        <!-- <button id="launchGame" onclick="launchGame()">Launch game window</button> -->
+
+        <audio id="song" preload="auto"></audio>
 
         <div id="popUpModal" class="pop-up-modal">
             <div class="modal-content">
@@ -779,6 +770,14 @@
                         console.error("Failed to copy notes to clipboard:", err);
                         window.alert("Failed to copy notes to clipboard.", err);
                     });
+            }
+
+            function launchGame() {
+                window.open(
+                    "http://127.0.0.1:5500", // Page to open
+                    "_blank", // Target (_blank = new window/tab)
+                    "width=1280,height=720,resizable=yes,scrollbars=yes"
+                );
             }
         </script>
     </body>

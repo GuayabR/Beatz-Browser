@@ -3284,15 +3284,8 @@ function startGame(rec = false, customSong = false) {
 
         // Show buttons
         const buttonsToShow = [
-            "nextButton",
-            "restartButton",
-            "previousButton",
-            "randomizeButton",
-            "toggleNoteStyleButton",
             "fullscreen",
             "settingsButton",
-            "myYoutube",
-            "githubRepo",
             "songVol",
             "hitSoundVol"
         ];
@@ -4605,13 +4598,13 @@ function gameLoop(currentTime) {
     const duration = currentSong.duration || 1;
     const progressWidth = (WIDTH * currentSongTime) / duration;
 
-    if (isFileProtocol) {
-        ctx.fillStyle = "red"
+    if (!isFileProtocol) {
+        const gradient = ctx.createLinearGradient(0, 0, progressWidth, 0);
+        gradient.addColorStop(0, `rgb(${bassBlend[0]}, ${bassBlend[1]}, ${bassBlend[2]})`);
+        gradient.addColorStop(1, `rgb(${trebleBlend[0]}, ${trebleBlend[1]}, ${trebleBlend[2]})`);
+        ctx.fillStyle = gradient;
     } else {
-    const gradient = ctx.createLinearGradient(0, 0, progressWidth, 0);
-    gradient.addColorStop(0, `rgb(${bassBlend[0]}, ${bassBlend[1]}, ${bassBlend[2]})`);
-    gradient.addColorStop(1, `rgb(${trebleBlend[0]}, ${trebleBlend[1]}, ${trebleBlend[2]})`);
-    ctx.fillStyle = gradient;
+        ctx.fillStyle = "red";
     }
 
     if (!recording && !upscroll) {
