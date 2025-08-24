@@ -26,7 +26,7 @@
 
         <button id="recordButton" onclick="startRecording()">Start Recording</button>
         <button id="stopRecordingButton" onclick="stopRecording()" style="display: none">Stop Recording</button>
-        
+
         <button id="toggleAutoHit" onclick="toggleAutoHit()">Toggle Auto Hit</button>
 
         <input type="file" id="fileInput" accept=".beatz" style="display: none" />
@@ -271,7 +271,7 @@
 
         <script src="Beatz.js"></script>
         <script>
-            function getSongTitle(songPath) {
+            function getSongTitle(songPath, ext) {
                 // Ensure songPath is a string
                 if (typeof songPath !== "string") {
                     console.log("songPath is not a string:", songPath);
@@ -281,7 +281,7 @@
                 // Extract the file name without the directory path
                 let fileName = songPath.split("/").pop();
                 // Remove the file extension
-                fileName = fileName.replace(".mp3", "").replace(".jpg", "").replace("_", "'");
+                if (!ext) fileName = fileName.replace(".mp3", "").replace(".flac", "").replace(".jpg", "").replace("_", "'");
                 // Decode the URI component
                 let decodedTitle = decodeURIComponent(fileName);
                 return decodedTitle;
@@ -557,7 +557,7 @@
                     );
 
                     // Find the song in "Resources/Songs" and set it to currentSong.src
-                    const songPath = `Resources/Songs/${song}.mp3`;
+                    const songPath = `Resources/Songs/${song}`;
                     const songFile = new Audio(songPath);
                     if (songFile.canPlayType) {
                         currentSong.src = songPath; // Set the source of the current song\
@@ -639,13 +639,13 @@
 
                 const username = prompt("Type username:");
                 const userChartName = prompt("Type chart name:");
-                const songName = getSongTitle(currentSong.src);
-                const userBPM = BPM;
+                const songName = getSongTitle(currentSong.src, true);
+                const userBPM = prompt("Enter BPM:") || 120;
                 const userNoteSpeed = prompt("Type Note Speed:");
                 const userNoteSpawnY = prompt("Type Spawn of Notes (Y position):");
 
                 // Format the content in the required structure
-                const content = `Song: ${songName}\\Charter: ${username}\\ChartName: ${userChartName}\\noteMode: ${userNoteMode}\\BPM: ${userBPM}\\noteSpeed: ${userNoteSpeed}\\noteSpawnY: ${userNoteSpawnY}\\Notes:${encodedNotes}`;
+                const content = `Song: ${songName}\\Charter: ${username}\\ChartName: ${userChartName}\\noteMode: ${userNoteMode}\\BPM: ${userBPM}\\noteSpeed: ${userNoteSpeed}\\noteSpawnY: ${userNoteSpawnY}\\Difficulty: easy\\PrevStart: 0.0\\PrevEnd: 600\\Notes:${encodedNotes}`;
 
                 // Create a Blob with the content
                 const blob = new Blob([content], { type: "text/plain;charset=utf-8" });

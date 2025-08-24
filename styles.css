@@ -15,18 +15,18 @@ body {
 }
 
 body::before {
-	content: "";
-	position: fixed; 
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-image: url("Resources/gradient.jpg");
-	background-size: cover;
-	background-repeat: repeat-y;
-	background-position: center;
-	filter: brightness(0.3) hue-rotate(300deg);
-	z-index: -1;
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("Resources/gradient.jpg");
+    background-size: cover;
+    background-repeat: repeat-y;
+    background-position: center;
+    filter: brightness(0.23) hue-rotate(300deg);
+    z-index: -1;
 }
 
 html {
@@ -73,7 +73,6 @@ canvas.fullscreenCanvas {
 /* Set canvas layering correctly */
 #canvas-1 {
     z-index: 0;
-    
 }
 #canvas2 {
     z-index: 2;
@@ -120,9 +119,7 @@ canvas.fullscreenCanvas {
     border-radius: 0; /* optional: set to 0 for full coverage */
     overflow: hidden;
     pointer-events: none;
-    transition:
-        width 0.4s ease,
-        height 0.4s ease;
+    transition: width 0.4s ease, height 0.4s ease;
 }
 
 .rotatingAlbumContainer img {
@@ -267,9 +264,7 @@ canvas.fullscreenCanvas {
     left: 50%;
     z-index: 10;
     transform: translateX(-50%);
-    transition:
-        height 0.25s ease-out,
-        opacity 0.5s ease-in-out;
+    transition: height 0.25s ease-out, opacity 0.5s ease-in-out;
     text-align: center;
     overflow: hidden;
 }
@@ -294,9 +289,7 @@ canvas.fullscreenCanvas {
     line-height: 20px;
     color: white;
     font-weight: bold;
-    transition:
-        width 0.05s linear,
-        height 0.25s ease-out;
+    transition: width 0.05s linear, height 0.25s ease-out;
     position: relative;
 }
 
@@ -386,7 +379,7 @@ canvas.fullscreenCanvas {
 #startButton {
     padding: 10px 40px;
     font-size: 20px;
-    background-color: rgb(105, 0, 91)25;
+    background-color: rgb(105, 0, 91) 25;
     color: white;
     border: solid rebeccapurple 2.3px;
     border-radius: 10px;
@@ -494,9 +487,7 @@ button:hover i {
     font-size: 16px;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
-    transition:
-        box-shadow 0.3s ease,
-        padding 0.3s ease;
+    transition: box-shadow 0.3s ease, padding 0.3s ease;
 }
 
 .most-recent-button:hover {
@@ -520,9 +511,7 @@ button:hover i {
     font-size: 16px;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
-    transition:
-        box-shadow 0.3s ease,
-        padding 0.3s ease;
+    transition: box-shadow 0.3s ease, padding 0.3s ease;
 }
 
 .song-button:hover {
@@ -604,9 +593,7 @@ button:hover i {
     font-weight: bold;
     background: none;
     box-shadow: 0 0px #00000000;
-    transition:
-        color 0.3s ease,
-        transform 0.3s ease;
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .keybind-button:hover {
@@ -614,9 +601,7 @@ button:hover i {
     text-decoration: none;
     cursor: pointer;
     box-shadow: 0 0px #00000000;
-    transition:
-        color 0.2s ease,
-        transform 0.2s ease;
+    transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .undo-keybinds,
@@ -652,9 +637,7 @@ button:hover i {
     float: right;
     font-size: 24px;
     font-weight: bold;
-    transition:
-        color 0.3s ease,
-        transform 0.3s ease;
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .close:hover {
@@ -662,9 +645,7 @@ button:hover i {
     text-decoration: none;
     cursor: pointer;
     transform: scale(1.25);
-    transition:
-        color 0.2s ease,
-        transform 0.3s ease;
+    transition: color 0.2s ease, transform 0.3s ease;
 }
 
 #keywordListButton {
@@ -677,9 +658,7 @@ button:hover i {
     font-weight: bold;
     background: none;
     box-shadow: 0 0px #dfdfdf3a;
-    transition:
-        color 0.3s ease,
-        transform 0.3s ease;
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 #keywordListButton:hover {
@@ -687,9 +666,7 @@ button:hover i {
     text-decoration: none;
     cursor: pointer;
     transform: scale(1.25);
-    transition:
-        color 0.2s ease,
-        transform 0.3s ease;
+    transition: color 0.2s ease, transform 0.3s ease;
 }
 
 #songSelector {
@@ -764,9 +741,7 @@ button:hover i {
     box-sizing: border-box;
     font-size: 14px;
     box-shadow: 0 0 10px rgba(114, 114, 114, 0.719);
-    transition:
-        box-shadow 0.3s ease,
-        padding ease 0.3s;
+    transition: box-shadow 0.3s ease, padding ease 0.3s;
 }
 
 .shared-form input[type="text"]::placeholder,
@@ -781,9 +756,7 @@ button:hover i {
     border-color: rgba(255, 255, 255, 0.4);
     background-color: rgba(255, 255, 255, 0.2);
     box-shadow: 0 0 10px rgba(248, 248, 248, 0.623);
-    transition:
-        box-shadow 0.3s ease,
-        padding ease 0.3s;
+    transition: box-shadow 0.3s ease, padding ease 0.3s;
 }
 
 .shared-form input[type="text"]:hover,
@@ -791,9 +764,7 @@ button:hover i {
 .shared-form select:hover {
     box-shadow: 0 0 10px rgba(221, 221, 221, 0.623);
     padding: 8px 12px;
-    transition:
-        box-shadow 0.3s ease,
-        padding ease 0.3s;
+    transition: box-shadow 0.3s ease, padding ease 0.3s;
 }
 
 .shared-form select {

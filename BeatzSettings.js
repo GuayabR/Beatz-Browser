@@ -85,8 +85,8 @@ let blurCanvasOnDefault = false;
 let blurAmountOnVids = 5; // in pixels
 let blurAmountOnCovers = 10; // in pixels
 let blurAmountOnDefault = 10; // in pixels
-let brightnessAmount = 0.3;
-let maxBrightnessAmount = 0.85;
+let brightnessAmount = 0.25;
+let maxBrightnessAmount = 0.65;
 
 let pulseBGwithSound = true;
 let brightenBGwithTreble = true;
